@@ -21,7 +21,10 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["torchlit", "torchlit.backend"]
+packages = ["torchlit", "torchlit.backend", "torchlit.frontend"]
+
+[tool.setuptools.package-data]
+"torchlit.frontend" = ["dist/**/*"]
 
 [project.urls]
 Homepage = "https://github.com/ChanLumerico/torchlit"

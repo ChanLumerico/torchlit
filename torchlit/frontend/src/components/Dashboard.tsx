@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Activity, ServerCrash, Zap, Monitor, HardDrive, Filter } from 'lucide-react';
+import { Activity, ServerCrash, Zap, Monitor, HardDrive, Filter, Layers } from 'lucide-react';
 import { MetricChart } from './MetricChart';
-import type { MetricLog, SysStats } from '../types';
+import type { MetricLog, SysStats, ModelInfo } from '../types';
 
 export const Dashboard: React.FC = () => {
     const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -11,15 +11,20 @@ export const Dashboard: React.FC = () => {
     // Data for the active experiment
     const [metricsData, setMetricsData] = useState<any[]>([]);
     const [latestStats, setLatestStats] = useState<SysStats | null>(null);
+    const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
 
     // Available metric keys
     const [metricKeys, setMetricKeys] = useState<string[]>([]);
 
     const ws = useRef<WebSocket | null>(null);
 
+    const isDev = import.meta.env.DEV;
+    const API_URL = isDev ? 'http://localhost:8000' : '';
+    const WS_URL = isDev ? 'ws://localhost:8000' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host;
+
     // 1. Fetch available experiments on load
     useEffect(() => {
-        fetch('http://localhost:8000/api/experiments')
+        fetch(`${API_URL}/api/experiments`)
             .then(res => res.json())
             .then(data => {
                 if (data.experiments && data.experiments.length > 0) {
@@ -38,9 +43,10 @@ export const Dashboard: React.FC = () => {
         setMetricsData([]);
         setMetricKeys([]);
         setLatestStats(null);
+        setModelInfo(null);
 
         const connectWs = () => {
-            const socket = new WebSocket(`ws://localhost:8000/ws/stream/${activeExp}`);
+            const socket = new WebSocket(`${WS_URL}/ws/stream/${activeExp}`);
 
             socket.onopen = () => setIsConnected(true);
             socket.onclose = () => setIsConnected(false);
@@ -65,6 +71,7 @@ export const Dashboard: React.FC = () => {
                 // Extract Keys dynamically
                 setMetricKeys(Object.keys(data.metrics));
                 setLatestStats(data.sys_stats);
+                if (data.model_info) setModelInfo(data.model_info);
             };
 
             ws.current = socket;
@@ -77,8 +84,8 @@ export const Dashboard: React.FC = () => {
         };
     }, [activeExp]);
 
-    // Colors for dynamic charts
-    const colors = ["#818cf8", "#34d399", "#f472b6", "#fbbf24", "#a78bfa"];
+    // Colors for dynamic charts matching PyTorch orange aesthetics
+    const colors = ["#EE4C2C", "#fb923c", "#fca5a5", "#fcd34d", "#f87171"];
 
     return (
         <div className="min-h-screen bg-[#0b0f19] text-slate-200 font-sans selection:bg-brand selection:text-white">
@@ -119,14 +126,60 @@ export const Dashboard: React.FC = () => {
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-8 py-8 space-y-8">
 
+                {/* Model Summary Banner */}
+                {modelInfo && (
+                    <div className="bg-gradient-to-r from-brand/10 to-transparent border border-brand/20 p-6 rounded-3xl mb-8">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="bg-brand/20 p-3 rounded-2xl">
+                                <Layers className="text-brand w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-100">{modelInfo.name || 'PyTorch Model'}</h3>
+                                <p className="text-brand text-sm font-medium">Model Architecture Overview</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {modelInfo.total_params && (
+                                <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
+                                    <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Total Params</p>
+                                    <p className="text-lg font-semibold text-slate-200">{modelInfo.total_params}</p>
+                                </div>
+                            )}
+                            {modelInfo.trainable_params && (
+                                <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
+                                    <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Trainable Params</p>
+                                    <p className="text-lg font-semibold text-slate-200">{modelInfo.trainable_params}</p>
+                                </div>
+                            )}
+                            {modelInfo.activation_size && (
+                                <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
+                                    <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Activation Size</p>
+                                    <p className="text-lg font-semibold text-slate-200">{modelInfo.activation_size}</p>
+                                </div>
+                            )}
+                            {Object.entries(modelInfo)
+                                .filter(([key]) => !['name', 'total_params', 'trainable_params', 'activation_size'].includes(key))
+                                .map(([key, value]) => (
+                                    <div key={key} className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
+                                        <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">{key.replace(/_/g, ' ')}</p>
+                                        <p className="text-lg font-semibold text-slate-200">{String(value)}</p>
+                                    </div>
+                                ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* System Stats Header */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-3xl flex items-center justify-between shadow-lg">
                         <div>
-                            <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">CPU Usage</p>
+                            <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Compute Usage</p>
                             <h2 className="text-4xl font-light text-slate-100">
                                 {latestStats?.cpu_percent.toFixed(1) || '--'}%
                             </h2>
+                            <p className="text-slate-500 text-xs mt-2 uppercase flex items-center gap-1">
+                                Device: <span className="text-brand font-semibold">{latestStats?.device_name || 'CPU'}</span>
+                            </p>
                         </div>
                         <div className="bg-blue-500/20 p-4 rounded-2xl">
                             <Monitor className="text-blue-400 w-8 h-8" />
@@ -135,10 +188,17 @@ export const Dashboard: React.FC = () => {
 
                     <div className="bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-3xl flex items-center justify-between shadow-lg">
                         <div>
-                            <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">RAM Usage</p>
+                            <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">
+                                {latestStats?.device_type && latestStats.device_type !== 'cpu' ? 'VRAM Usage' : 'RAM Usage'}
+                            </p>
                             <h2 className="text-4xl font-light text-slate-100">
-                                {latestStats?.ram_percent.toFixed(1) || '--'}%
+                                {latestStats?.vram_percent != null
+                                    ? latestStats.vram_percent.toFixed(1)
+                                    : (latestStats?.ram_percent?.toFixed(1) || '--')}%
                             </h2>
+                            <p className="text-slate-500 text-xs mt-2 uppercase">
+                                {latestStats?.device_type && latestStats.device_type !== 'cpu' ? 'GPU Memory' : 'System Memory'}
+                            </p>
                         </div>
                         <div className="bg-emerald-500/20 p-4 rounded-2xl">
                             <HardDrive className="text-emerald-400 w-8 h-8" />

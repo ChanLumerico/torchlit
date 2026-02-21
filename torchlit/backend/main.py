@@ -1,8 +1,11 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Dict, List, Any
 import asyncio
+import os
 from collections import defaultdict, deque
 
 app = FastAPI(title="torchlit broker")
@@ -33,6 +36,7 @@ class MetricLog(BaseModel):
     step: int
     metrics: Dict[str, Any]
     sys_stats: Dict[str, Any]
+    model_info: Dict[str, Any] = None
 
 
 @app.post("/api/log")
@@ -92,4 +96,24 @@ async def websocket_endpoint(websocket: WebSocket, exp_name: str):
 async def list_experiments():
     """List all active experiments"""
     return {"experiments": list(experiment_metrics.keys())}
+
+
+# --- Serve Frontend SPA ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIST = os.path.join(BASE_DIR, "..", "frontend", "dist")
+FRONTEND_ASSETS = os.path.join(FRONTEND_DIST, "assets")
+
+if os.path.exists(FRONTEND_ASSETS):
+    app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS), name="assets")
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    """Fallback route to serve the React SPA index.html for all non-API paths."""
+    # Check if we have the built frontend
+    index_path = os.path.join(FRONTEND_DIST, "index.html")
+    if os.path.exists(index_path):
+        # We explicitly serve index.html and let React handle the client-side routing
+        return FileResponse(index_path)
+    
+    return {"error": "Frontend build not found. Run 'npm run build' inside torchlit/frontend"}
 
