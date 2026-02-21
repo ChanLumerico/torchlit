@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Activity, ServerCrash, Zap, Monitor, HardDrive, Filter, Layers } from 'lucide-react';
+import { Activity, ServerCrash, Zap, Monitor, HardDrive, Filter, Layers, X, ChevronDown } from 'lucide-react';
 import { MetricChart } from './MetricChart';
 import type { MetricLog, SysStats, ModelInfo } from '../types';
 
@@ -13,8 +13,15 @@ export const Dashboard: React.FC = () => {
     const [latestStats, setLatestStats] = useState<SysStats | null>(null);
     const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
 
+    const [lastUpdate, setLastUpdate] = useState<number>(0);
+    const [isTraining, setIsTraining] = useState<boolean>(false);
+
     // Available metric keys
     const [metricKeys, setMetricKeys] = useState<string[]>([]);
+
+    // UI states
+    const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+    const [smoothing, setSmoothing] = useState<number>(0.6);
 
     const ws = useRef<WebSocket | null>(null);
 
@@ -35,15 +42,50 @@ export const Dashboard: React.FC = () => {
             .catch(console.error);
     }, []);
 
+    const handleDeleteExp = async (expToDelete: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            await fetch(`${API_URL}/api/experiments/${expToDelete}`, { method: 'DELETE' });
+            const remaining = experiments.filter(exp => exp !== expToDelete);
+            setExperiments(remaining);
+            if (activeExp === expToDelete) {
+                setActiveExp(remaining.length > 0 ? remaining[0] : '');
+            }
+        } catch (err) {
+            console.error("Failed to delete experiment", err);
+        }
+    };
+
+    const handleClearAll = async () => {
+        if (!confirm("Are you sure you want to clear ALL training sessions? This cannot be undone.")) {
+            return;
+        }
+        try {
+            const response = await fetch(`${API_URL}/api/experiments/clear`, { method: 'POST' });
+            if (response.ok) {
+                setExperiments([]);
+                setActiveExp('');
+                setMetricsData([]);
+                setLatestStats(null);
+                setModelInfo(null);
+                setDropdownOpen(false);
+            }
+        } catch (err) {
+            console.error("Failed to clear experiments:", err);
+        }
+    };
+
     // 2. Connect to WebSocket when active experiment changes
     useEffect(() => {
-        if (!activeExp) return;
-
         // Reset Data
         setMetricsData([]);
         setMetricKeys([]);
         setLatestStats(null);
         setModelInfo(null);
+        setLastUpdate(0);
+        setIsTraining(false);
+
+        if (!activeExp) return;
 
         const connectWs = () => {
             const socket = new WebSocket(`${WS_URL}/ws/stream/${activeExp}`);
@@ -54,6 +96,8 @@ export const Dashboard: React.FC = () => {
 
             socket.onmessage = (event) => {
                 const data: MetricLog = JSON.parse(event.data);
+
+                setLastUpdate(Date.now());
 
                 // Flatten payload for Recharts
                 const flatData = {
@@ -81,8 +125,24 @@ export const Dashboard: React.FC = () => {
 
         return () => {
             if (ws.current) ws.current.close();
+            setLastUpdate(0);
+            setIsTraining(false);
         };
     }, [activeExp]);
+
+    // Check training status
+    useEffect(() => {
+        let timeout: number | undefined;
+        if (lastUpdate > 0 && isConnected) {
+            setIsTraining(true);
+            timeout = window.setTimeout(() => setIsTraining(false), 3000);
+        } else {
+            setIsTraining(false);
+        }
+        return () => {
+            if (timeout) window.clearTimeout(timeout);
+        };
+    }, [lastUpdate, isConnected]);
 
     // Colors for dynamic charts matching PyTorch orange aesthetics
     const colors = ["#EE4C2C", "#fb923c", "#fca5a5", "#fcd34d", "#f87171"];
@@ -102,18 +162,69 @@ export const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700/50">
-                        <Filter className="w-4 h-4" />
-                        <select
-                            value={activeExp}
-                            onChange={(e) => setActiveExp(e.target.value)}
-                            className="bg-transparent border-none outline-none appearance-none cursor-pointer font-medium text-slate-200"
+                    {/* Smoothing Slider */}
+                    <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700/50">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-tighter">Smooth</span>
+                        <input
+                            type="range"
+                            min="0"
+                            max="0.99"
+                            step="0.01"
+                            value={smoothing}
+                            onChange={(e) => setSmoothing(parseFloat(e.target.value))}
+                            className="w-24 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand"
+                        />
+                        <span className="text-xs font-mono text-brand w-8">{smoothing.toFixed(2)}</span>
+                    </div>
+
+                    <div className="relative">
+                        <div
+                            className="flex items-center gap-2 text-sm text-slate-400 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700/50 cursor-pointer hover:bg-slate-800 transition-colors"
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
                         >
-                            {experiments.length === 0 && <option value="">No Active Training</option>}
-                            {experiments.map(exp => (
-                                <option key={exp} value={exp} className="bg-slate-800">{exp}</option>
-                            ))}
-                        </select>
+                            <Filter className="w-4 h-4" />
+                            <span className="font-medium text-slate-200 select-none">
+                                {activeExp || "No Active Training"}
+                            </span>
+                            <ChevronDown className="w-4 h-4 ml-2" />
+                        </div>
+
+                        {dropdownOpen && (
+                            <div className="absolute top-full mt-2 w-64 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50 right-0">
+                                {experiments.length === 0 ? (
+                                    <div className="px-4 py-3 text-sm text-slate-400">No experiments available</div>
+                                ) : (
+                                    experiments.map(exp => (
+                                        <div
+                                            key={exp}
+                                            className={`flex items-center justify-between px-4 py-3 hover:bg-slate-700/50 cursor-pointer transition-colors ${activeExp === exp ? 'bg-brand/10 border-l-2 border-brand' : ''}`}
+                                            onClick={() => {
+                                                setActiveExp(exp);
+                                                setDropdownOpen(false);
+                                            }}
+                                        >
+                                            <span className={`text-sm font-medium ${activeExp === exp ? 'text-brand' : 'text-slate-200'}`}>{exp}</span>
+                                            <button
+                                                onClick={(e) => handleDeleteExp(exp, e)}
+                                                className="p-1 rounded-full text-slate-400 hover:bg-slate-600 hover:text-red-400 transition-colors"
+                                                title="Delete Session"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                                {experiments.length > 0 && (
+                                    <div
+                                        className="border-t border-slate-700 bg-slate-900/50 hover:bg-red-500/10 transition-colors px-4 py-3 flex items-center gap-2 text-red-400 text-xs font-bold uppercase tracking-wider cursor-pointer select-none"
+                                        onClick={handleClearAll}
+                                    >
+                                        <X className="w-4 h-4" />
+                                        Clear All Sessions
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full border ${isConnected ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
@@ -133,9 +244,13 @@ export const Dashboard: React.FC = () => {
                             <div className="bg-brand/20 p-3 rounded-2xl">
                                 <Layers className="text-brand w-6 h-6" />
                             </div>
-                            <div>
+                            <div className="flex-1">
                                 <h3 className="text-xl font-bold text-slate-100">{modelInfo.name || 'PyTorch Model'}</h3>
                                 <p className="text-brand text-sm font-medium">Model Architecture Overview</p>
+                            </div>
+                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border shadow-sm ${isTraining ? 'bg-brand/10 text-brand border-brand/20' : 'bg-slate-800/50 text-slate-500 border-slate-700/50'}`}>
+                                <span className={`w-2 h-2 rounded-full ${isTraining ? 'bg-brand animate-pulse' : 'bg-slate-600'}`}></span>
+                                {isTraining ? 'Training Active' : 'Stopped'}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -216,6 +331,7 @@ export const Dashboard: React.FC = () => {
                                 data={metricsData}
                                 dataKey={key}
                                 color={colors[i % colors.length]}
+                                smoothing={smoothing}
                             />
                         ))}
                     </div>

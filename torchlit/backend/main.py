@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from typing import Dict, List, Any
 import asyncio
 import os
+import signal
 from collections import defaultdict, deque
 
 app = FastAPI(title="torchlit broker")
@@ -24,11 +25,27 @@ app.add_middleware(
 # }
 experiment_metrics: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
 
-# Connected websocket clients per experiment
 # {
 #    "experiment_name": [websocket1, websocket2, ...]
 # }
 active_connections: Dict[str, List[WebSocket]] = defaultdict(list)
+
+# Auto-shutdown state
+training_finished = False
+
+
+async def delayed_shutdown(delay: int = 2):
+    """Wait for delay, then shut down if conditions are still met."""
+    await asyncio.sleep(delay)
+    total_connections = sum(len(conns) for conns in active_connections.values())
+    if training_finished and total_connections == 0:
+        print(
+            "\n⚡ torchlit dashboard auto-shutting down because there are no active connections."
+        )
+        # Force terminate from a separate thread to bypass uvicorn's signal interception
+        import threading
+
+        threading.Thread(target=lambda: os._exit(0), daemon=True).start()
 
 
 class MetricLog(BaseModel):
@@ -39,6 +56,23 @@ class MetricLog(BaseModel):
     model_info: Dict[str, Any] = None
 
 
+class StatusLog(BaseModel):
+    status: str
+
+
+@app.post("/api/status")
+async def update_status(status_log: StatusLog):
+    """Receive status updates. Auto-shutdown if training finished and no one is watching."""
+    global training_finished
+    if status_log.status == "finished":
+        training_finished = True
+        total_connections = sum(len(conns) for conns in active_connections.values())
+        if total_connections == 0:
+            # Give user 10 seconds to open browser if they haven't yet
+            asyncio.create_task(delayed_shutdown(delay=10))
+    return {"status": "ok"}
+
+
 @app.post("/api/log")
 async def log_metrics(log_data: MetricLog):
     """
@@ -46,10 +80,10 @@ async def log_metrics(log_data: MetricLog):
     """
     exp_name = log_data.exp_name
     data_point = log_data.dict()
-    
+
     # Store in memory cache
     experiment_metrics[exp_name].append(data_point)
-    
+
     # Broadcast to connected clients for this experiment
     if exp_name in active_connections:
         dead_connections = []
@@ -58,11 +92,11 @@ async def log_metrics(log_data: MetricLog):
                 await connection.send_json(data_point)
             except Exception:
                 dead_connections.append(connection)
-        
+
         # Cleanup dead connections
         for dead in dead_connections:
             active_connections[exp_name].remove(dead)
-            
+
     return {"status": "ok"}
 
 
@@ -74,28 +108,65 @@ async def websocket_endpoint(websocket: WebSocket, exp_name: str):
     """
     await websocket.accept()
     active_connections[exp_name].append(websocket)
-    
+
     try:
         # Rehydrate existing data
         if exp_name in experiment_metrics and len(experiment_metrics[exp_name]) > 0:
             # Send all historical metrics
             for data_point in list(experiment_metrics[exp_name]):
                 await websocket.send_json(data_point)
-                
+
         # Keep connection alive
         while True:
             # Wait for any messages from client (e.g. ping)
             await websocket.receive_text()
-            
+
     except WebSocketDisconnect:
         active_connections[exp_name].remove(websocket)
         if not active_connections[exp_name]:
             del active_connections[exp_name]
 
+        # Trigger auto-shutdown check if training is done
+        total_connections = sum(len(conns) for conns in active_connections.values())
+        if training_finished and total_connections == 0:
+            asyncio.create_task(delayed_shutdown(delay=2))
+
+
 @app.get("/api/experiments")
 async def list_experiments():
     """List all active experiments"""
     return {"experiments": list(experiment_metrics.keys())}
+
+
+@app.post("/api/experiments/clear")
+async def clear_all_experiments():
+    """Delete all experiment log files."""
+    try:
+        if os.path.exists(LOG_DIR):
+            for f in os.listdir(LOG_DIR):
+                if f.endswith(".jsonl"):
+                    os.remove(os.path.join(LOG_DIR, f))
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/experiments/{exp_name}")
+async def delete_experiment(exp_name: str):
+    """Delete all data for a specific experiment and close its connections"""
+    if exp_name in experiment_metrics:
+        del experiment_metrics[exp_name]
+
+    # Send close signal to connected clients
+    if exp_name in active_connections:
+        for ws in list(active_connections[exp_name]):
+            try:
+                await ws.close()
+            except Exception:
+                pass
+        del active_connections[exp_name]
+
+    return {"status": "ok", "deleted": exp_name}
 
 
 # --- Serve Frontend SPA ---
@@ -106,6 +177,7 @@ FRONTEND_ASSETS = os.path.join(FRONTEND_DIST, "assets")
 if os.path.exists(FRONTEND_ASSETS):
     app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS), name="assets")
 
+
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
     """Fallback route to serve the React SPA index.html for all non-API paths."""
@@ -114,6 +186,7 @@ async def serve_frontend(full_path: str):
     if os.path.exists(index_path):
         # We explicitly serve index.html and let React handle the client-side routing
         return FileResponse(index_path)
-    
-    return {"error": "Frontend build not found. Run 'npm run build' inside torchlit/frontend"}
 
+    return {
+        "error": "Frontend build not found. Run 'npm run build' inside torchlit/frontend"
+    }
