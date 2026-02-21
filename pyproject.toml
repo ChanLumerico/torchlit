@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torchlit"
+version = "0.1.0"
+description = "A lightweight real-time ML training monitor."
+readme = "README.md"
+authors = [
+    { name="ChanLumerico" }
+]
+requires-python = ">=3.8"
+dependencies = [
+    "requests",
+    "psutil",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "websockets>=10.4",
+    "pydantic>=2.0.0",
+]
+
+[tool.setuptools]
+packages = ["torchlit", "torchlit.backend"]
+
+[project.urls]
+Homepage = "https://github.com/ChanLumerico/torchlit"

@@ -211,5 +211,13 @@ runs/
 out/
 data/
 
+torchlit.egg-info/
+venv/
+
+.pyre_configuration
+pyrightconfig.json
+
+test_client.py
+
 # OS files
 .DS_Store
