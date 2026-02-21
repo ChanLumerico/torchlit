@@ -1,19 +1,17 @@
-import streamlit as st
+from __future__ import annotations
 
-from torchlit.web.pages.inspector import render as render_inspector
-from torchlit.web.pages.training import render as render_training
+import sys
+from pathlib import Path
 
+try:
+    from .Home import main
+except Exception:
+    project_root = Path(__file__).resolve().parents[2]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    from torchlit.web.Home import main
 
-def main() -> None:
-    st.set_page_config(page_title="Torchlit", layout="wide")
-
-    st.sidebar.title("Torchlit")
-    page = st.sidebar.radio("Page", options=["Training", "Inspector"], index=0)
-
-    if page == "Training":
-        render_training()
-    else:
-        render_inspector()
+__all__ = ["main"]
 
 
 if __name__ == "__main__":

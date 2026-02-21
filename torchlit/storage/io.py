@@ -48,12 +48,6 @@ def read_metrics_chunk(
     offset: int = 0,
     max_records: int = 5000,
 ) -> tuple[list[dict[str, Any]], int]:
-    """
-    Read metrics incrementally from a JSONL file.
-
-    Returns (records, next_offset). Partial trailing lines are ignored and
-    returned on the next read after they become complete.
-    """
     path = Path(run_dir) / METRICS_FILENAME
     if not path.exists():
         return [], 0

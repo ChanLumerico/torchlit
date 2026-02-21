@@ -209,6 +209,7 @@ __marimo__/
 # Torchlit local artifacts
 runs/
 out/
+data/
 
 # OS files
 .DS_Store

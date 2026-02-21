@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -7,7 +9,13 @@ from typing import Any
 
 import streamlit as st
 
+# Support running as Streamlit page script without package install.
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from torchlit.storage.io import list_runs, read_meta, read_metrics_chunk
+from torchlit.web.ui import apply_sidebar_brand
 
 RESERVED_KEYS = {"t_ms", "step", "epoch", "split", "dt_ms"}
 
@@ -46,10 +54,15 @@ def _prepare_line_chart_data(
 
 
 def render() -> None:
+    apply_sidebar_brand()
     st.title("Training Metrics")
     st.caption("Append-only JSONL metrics viewer for TrainTracker runs")
 
-    run_root = st.sidebar.text_input("Run root", value=st.session_state.get("run_root", "runs"))
+    default_run_root = os.getenv("TORCHLIT_RUN_ROOT", "runs")
+    run_root = st.sidebar.text_input(
+        "Run root",
+        value=st.session_state.get("run_root", default_run_root),
+    )
     st.session_state["run_root"] = run_root
 
     runs = list_runs(run_root)
@@ -104,9 +117,7 @@ def render() -> None:
         st.warning("No metrics yet. Keep training and this view will update.")
     else:
         all_metric_keys = _extract_metric_keys(rows_cache)
-        default_metrics = [k for k in ["loss", "lr", "gpu_mem_mb", "grad_norm"] if k in all_metric_keys]
-        if not default_metrics:
-            default_metrics = all_metric_keys[: min(3, len(all_metric_keys))]
+        default_metrics = ["loss"] if "loss" in all_metric_keys else all_metric_keys[:1]
 
         selected_metrics = st.multiselect(
             "Metrics",
@@ -131,3 +142,7 @@ def render() -> None:
     if auto_refresh:
         time.sleep(refresh_seconds)
         st.rerun()
+
+
+if __name__ == "__main__":
+    render()
