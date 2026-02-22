@@ -104,16 +104,8 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
 
     return (
         <div className="flex flex-col relative">
-            {/* Visual hierarchy connector line for children depth */}
-            {depth > 0 && (
-                <div
-                    className="absolute top-0 bottom-0 border-l border-slate-800/60 pointer-events-none"
-                    style={{ left: `${(depth - 1) * 1.5 + 1.25}rem` }}
-                />
-            )}
-
             <div
-                className={`flex items-center gap-2 py-2 px-3 rounded-lg group transition-all duration-200 border-l-2 border-transparent ${theme.rowHover} ${hasChildren ? 'cursor-pointer' : ''}`}
+                className={`flex items-center gap-2 py-2 px-3 rounded-lg group transition-all duration-200 border-transparent ${theme.rowHover} ${hasChildren ? 'cursor-pointer' : ''}`}
                 style={{ paddingLeft: `${depth * 1.5 + 0.75}rem` }}
                 onClick={() => hasChildren && setIsExpanded(!isExpanded)}
             >
@@ -156,7 +148,7 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
             </div>
 
             {hasChildren && isExpanded && (
-                <div className={`flex flex-col ml-3 mt-1 p-1.5 relative border-l-2 ${theme.borderLeft} rounded-bl-xl rounded-tl-xl rounded-r-xl bg-gradient-to-br from-black/20 to-transparent`}>
+                <div className={`flex flex-col ml-3 mt-1 p-2 relative border-l-2 ${theme.borderLeft} rounded-lg bg-gradient-to-br from-black/20 to-transparent`}>
                     {node.children.map((child, idx) => (
                         <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} forceExpand={forceExpand} />
                     ))}
