@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "torchlit"
-version = "0.1.0"
+name = "torch-lit"
+version = "0.2.0"
 description = "A lightweight real-time ML training monitor."
 readme = "README.md"
 authors = [
@@ -22,7 +22,6 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["torchlit", "torchlit.backend", "torchlit.frontend", "torchlit.bin"]
-package-dir = {"": "."}
 
 [tool.setuptools.package-data]
 "torchlit.frontend" = ["dist/**/*"]
