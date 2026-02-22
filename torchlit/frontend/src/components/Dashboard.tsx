@@ -250,13 +250,13 @@ export const Dashboard: React.FC = () => {
     }, [lastUpdate, isConnected]);
 
     return (
-        <div className="min-h-screen bg-[#0b0f19] text-slate-200 font-sans selection:bg-brand selection:text-white flex overflow-hidden">
+        <div className="min-h-screen bg-gradient-to-br from-[#030712] via-[#0b1121] to-[#030712] text-slate-200 font-sans selection:bg-brand selection:text-white flex overflow-hidden">
             <Toaster position="top-right" toastOptions={{ style: { background: '#1e293b', color: '#f8fafc', border: '1px solid #334155' } }} />
 
             {/* Main Layout Area */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
                 {/* Top Navbar */}
-                <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#0b0f19]/80 border-b border-slate-800/80 px-8 h-16 shrink-0 flex items-center justify-between gap-8">
+                <nav className="sticky top-0 z-50 glass-panel border-x-0 border-t-0 rounded-none px-8 h-16 shrink-0 flex items-center justify-between gap-8">
                     <div className="flex items-center gap-12 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="bg-brand/20 p-2 rounded-xl">
@@ -268,7 +268,7 @@ export const Dashboard: React.FC = () => {
                         </div>
 
                         {/* Navigation Tabs */}
-                        <div className="flex items-center gap-1 bg-slate-800/40 p-1 rounded-xl border border-slate-700/50">
+                        <div className="flex items-center gap-1 glass-card p-1 rounded-xl">
                             <button
                                 onClick={() => setActiveTab('dashboard')}
                                 className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-slate-700/80 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/40'}`}
@@ -308,7 +308,7 @@ export const Dashboard: React.FC = () => {
 
                             {/* Model Summary Banner (Primary selected session) */}
                             {selectedExps.length > 0 && modelInfos[selectedExps[0]] && (
-                                <div className="bg-gradient-to-r from-brand/10 to-transparent border border-brand/20 p-6 rounded-3xl mb-8">
+                                <div className="glass-panel bg-gradient-to-r from-brand/10 to-transparent border-brand/20 p-6 rounded-3xl mb-8">
                                     <div className="flex items-center gap-4 mb-4">
                                         <div className="bg-brand/20 p-3 rounded-2xl">
                                             <Layers className="text-brand w-6 h-6" />
@@ -358,7 +358,7 @@ export const Dashboard: React.FC = () => {
                                 const primaryStats = latestStats[selectedExps[0]];
                                 return (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="relative overflow-hidden bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-3xl flex items-center justify-between shadow-lg">
+                                        <div className="relative overflow-hidden glass-panel p-6 rounded-3xl flex items-center justify-between shadow-lg">
                                             <Sparkline data={historicalStats[selectedExps[0]] || []} dataKey="cpu_percent" color="#3b82f6" />
                                             <div className="relative z-10">
                                                 <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Compute Usage</p>
@@ -374,7 +374,7 @@ export const Dashboard: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="relative overflow-hidden bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-3xl flex items-center justify-between shadow-lg">
+                                        <div className="relative overflow-hidden glass-panel p-6 rounded-3xl flex items-center justify-between shadow-lg">
                                             <Sparkline
                                                 data={historicalStats[selectedExps[0]] || []}
                                                 dataKey={primaryStats.device_type !== 'cpu' ? 'vram_percent' : 'ram_percent'}
@@ -433,7 +433,7 @@ export const Dashboard: React.FC = () => {
 
             {/* Right Control Panel */}
             {isPanelOpen && (
-                <aside className="w-80 shrink-0 bg-[#0d1320] border-l border-slate-800/80 flex flex-col h-screen overflow-y-auto z-40 relative animate-in slide-in-from-right-10 duration-200">
+                <aside className="w-80 shrink-0 glass-panel border-y-0 border-r-0 rounded-none flex flex-col h-screen overflow-y-auto z-40 relative animate-in slide-in-from-right-10 duration-200">
                     <div className="sticky top-0 bg-[#0d1320] z-10 px-5 h-16 shrink-0 border-b border-slate-800/80 flex items-center justify-between">
                         <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
                             <Filter className="w-4 h-4 text-brand" />
@@ -451,7 +451,7 @@ export const Dashboard: React.FC = () => {
                             <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Active Sessions</h3>
                             <div className="space-y-2">
                                 {experiments.length === 0 ? (
-                                    <div className="p-3 text-sm text-slate-500 bg-slate-800/30 rounded-xl border border-slate-800 border-dashed text-center">
+                                    <div className="p-3 text-sm text-slate-500 glass-card rounded-xl border-dashed text-center">
                                         No sessions found
                                     </div>
                                 ) : (
@@ -491,7 +491,7 @@ export const Dashboard: React.FC = () => {
                                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Chart Smoothing</h3>
                                 <span className="text-xs font-mono text-brand font-bold bg-brand/10 px-2 py-0.5 rounded-md">{smoothing.toFixed(2)}</span>
                             </div>
-                            <div className="flex items-center gap-3 bg-slate-800/30 p-4 rounded-xl border border-slate-700/50">
+                            <div className="flex items-center gap-3 glass-card p-4 rounded-xl">
                                 <input
                                     type="range"
                                     min="0"
@@ -510,7 +510,7 @@ export const Dashboard: React.FC = () => {
                             <div className="space-y-2">
                                 <button
                                     onClick={handleExportCSV}
-                                    className="w-full flex items-center justify-center gap-2 text-sm font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 p-3 rounded-xl border border-slate-700 transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 text-sm font-medium text-slate-200 glass-card glass-hover p-3 rounded-xl transition-colors"
                                 >
                                     <DownloadCloud className="w-4 h-4 text-brand" />
                                     Export CSV

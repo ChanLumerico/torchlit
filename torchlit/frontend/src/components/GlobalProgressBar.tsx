@@ -27,7 +27,7 @@ export const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({ selectedEx
                 return (
                     <div
                         key={exp}
-                        className="pointer-events-auto flex items-center gap-4 bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-full px-5 py-2.5 shadow-2xl shadow-brand/10 hover:scale-[1.02] hover:shadow-brand/20 transition-all duration-300 pointer-events-auto group"
+                        className="pointer-events-auto flex items-center gap-4 glass-panel rounded-full px-5 py-2.5 shadow-brand/10 hover:scale-[1.02] hover:shadow-brand/20 transition-all duration-300 group"
                     >
                         {/* Glow indicator & Exp Name */}
                         <div className="flex items-center gap-2 shrink-0">

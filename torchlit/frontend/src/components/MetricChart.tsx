@@ -70,7 +70,7 @@ export const MetricChart: React.FC<MetricChartProps> = ({
     }, [data, metricKey, selectedExps, smoothing]);
 
     return (
-        <div className={`bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl transition-all duration-300 ${isZoomed ? 'p-8 h-full flex flex-col' : 'p-5 hover:shadow-2xl'}`}>
+        <div className={`glass-panel rounded-2xl transition-all duration-300 ${isZoomed ? 'p-8 h-full flex flex-col rounded-none' : 'p-5 hover:-translate-y-1'}`}>
             <div className="flex items-center justify-between mb-4">
                 <h3 className={`${isZoomed ? 'text-lg' : 'text-sm'} font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2`}>
                     <Activity size={isZoomed ? 20 : 16} style={{ color: colors[colorIndex % colors.length] }} />

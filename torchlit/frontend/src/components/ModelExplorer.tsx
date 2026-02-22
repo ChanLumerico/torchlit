@@ -120,7 +120,7 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
                 </div>
 
                 {/* Module Specific Icon */}
-                <div className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md bg-slate-800/40 border border-slate-700/30">
+                <div className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md glass-pill border-slate-700/30">
                     <IconComponent className={`w-3.5 h-3.5 ${theme.iconColor}`} />
                 </div>
 
@@ -147,7 +147,7 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
             </div>
 
             {hasChildren && isExpanded && (
-                <div className={`flex flex-col gap-1.5 ml-4 mt-1.5 p-2 relative rounded-2xl bg-slate-900/40 border border-slate-700/40 border-l-[3px] ${theme.borderLeft} shadow-sm overflow-hidden`}>
+                <div className={`flex flex-col gap-1.5 ml-4 mt-1.5 p-2 relative rounded-2xl glass-card shadow-none border-l-[3px] ${theme.borderLeft} overflow-hidden`}>
                     {node.children.map((child, idx) => (
                         <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} forceExpand={forceExpand} />
                     ))}
@@ -177,7 +177,7 @@ export const ModelExplorer: React.FC<ModelExplorerProps> = ({ modelInfo }) => {
 
     if (!modelInfo) {
         return (
-            <div className="h-96 flex flex-col items-center justify-center text-slate-500 bg-slate-800/20 border border-slate-800 rounded-3xl border-dashed">
+            <div className="h-96 flex flex-col items-center justify-center text-slate-500 glass-card rounded-3xl border-dashed">
                 <Box className="w-12 h-12 mb-4 opacity-50" />
                 <p className="text-lg font-medium">No Model Data Available</p>
                 <p className="text-sm">Connect a PyTorch module to view its architecture.</p>
@@ -186,8 +186,8 @@ export const ModelExplorer: React.FC<ModelExplorerProps> = ({ modelInfo }) => {
     }
 
     return (
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl overflow-hidden flex flex-col h-[calc(100vh-12rem)] shadow-xl">
-            <div className="p-6 border-b border-slate-800/80 bg-slate-900/80 flex items-center justify-between shrink-0">
+        <div className="glass-panel bg-transparent rounded-3xl overflow-hidden flex flex-col h-[calc(100vh-12rem)]">
+            <div className="p-6 border-b border-slate-800/80 bg-transparent flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="bg-emerald-500/20 p-2.5 rounded-xl border border-emerald-500/20">
                         <Layers className="text-emerald-400 w-6 h-6" />
@@ -200,7 +200,7 @@ export const ModelExplorer: React.FC<ModelExplorerProps> = ({ modelInfo }) => {
 
                 <div className="flex items-center gap-4">
                     {/* Expand / Collapse All buttons */}
-                    <div className="flex items-center gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50">
+                    <div className="flex items-center gap-1 glass-card p-1 rounded-xl">
                         <button
                             onClick={handleExpandAll}
                             title="Expand All"
@@ -241,7 +241,7 @@ export const ModelExplorer: React.FC<ModelExplorerProps> = ({ modelInfo }) => {
 
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 {modelInfo.architecture ? (
-                    <div className="bg-[#0b0f19] rounded-2xl p-4 border border-slate-800/50 shadow-inner">
+                    <div className="glass-card bg-black/20 rounded-2xl p-4">
                         <TreeNode node={modelInfo.architecture} depth={0} forceExpand={forceExpand} />
                     </div>
                 ) : (
