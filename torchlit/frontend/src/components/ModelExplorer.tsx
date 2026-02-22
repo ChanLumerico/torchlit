@@ -105,7 +105,7 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
     return (
         <div className="flex flex-col relative">
             <div
-                className={`flex items-center gap-2 py-2 px-3 rounded-xl group transition-all duration-200 border border-transparent ${theme.rowHover} ${hasChildren ? \'cursor-pointer\' : \'\'}`}
+                className={`flex items-center gap-2 py-1.5 px-3 rounded-lg group transition-all duration-200 border border-transparent ${theme.rowHover} ${hasChildren ? 'cursor-pointer' : ''}`}
                 onClick={() => hasChildren && setIsExpanded(!isExpanded)}
             >
                 {/* Expander Arrow */}
@@ -147,7 +147,7 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
             </div>
 
             {hasChildren && isExpanded && (
-                <div className={`flex flex-col ml-4 mt-1.5 p-2 relative rounded-2xl bg-slate-900/40 border border-slate-700/40 border-l-[3px] ${theme.borderLeft} shadow-sm overflow-hidden`}>
+                <div className={`flex flex-col gap-1.5 ml-4 mt-1.5 p-2 relative rounded-2xl bg-slate-900/40 border border-slate-700/40 border-l-[3px] ${theme.borderLeft} shadow-sm overflow-hidden`}>
                     {node.children.map((child, idx) => (
                         <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} forceExpand={forceExpand} />
                     ))}
