@@ -4,7 +4,6 @@ import toast, { Toaster } from 'react-hot-toast';
 import { MetricChart } from './MetricChart';
 import { Sparkline } from './Sparkline';
 import { ModelExplorer } from './ModelExplorer';
-import { ComparisonTable } from './ComparisonTable';
 import { GlobalProgressBar } from './GlobalProgressBar';
 import type { MetricLog, SysStats, ModelInfo } from '../types';
 
@@ -406,7 +405,7 @@ export const Dashboard: React.FC = () => {
                             {/* Charts Grid */}
                             {mergedData.length > 0 ? (
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                                    {metricKeys.map((key) => (
+                                    {metricKeys.map((key, index) => (
                                         <MetricChart
                                             key={key}
                                             title={key}
@@ -415,6 +414,7 @@ export const Dashboard: React.FC = () => {
                                             metricKey={key}
                                             smoothing={smoothing}
                                             onZoom={() => setZoomedChart(key)}
+                                            colorIndex={index}
                                         />
                                     ))}
                                 </div>
@@ -426,12 +426,6 @@ export const Dashboard: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Comparison Table */}
-                            <ComparisonTable
-                                selectedExps={selectedExps}
-                                allMetrics={allMetrics}
-                                metricKeys={metricKeys}
-                            />
                         </>
                     )}
 
@@ -470,11 +464,7 @@ export const Dashboard: React.FC = () => {
                                                     key={exp}
                                                     className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors group ${isSelected ? 'bg-brand/10 text-brand' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white'}`}
                                                     onClick={() => {
-                                                        if (isSelected) {
-                                                            setSelectedExps(prev => prev.filter(e => e !== exp));
-                                                        } else {
-                                                            setSelectedExps(prev => [...prev, exp]);
-                                                        }
+                                                        setSelectedExps(isSelected ? [] : [exp]);
                                                     }}
                                                 >
                                                     <div className="flex items-center gap-2">

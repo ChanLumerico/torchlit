@@ -19,6 +19,7 @@ interface MetricChartProps {
     smoothing: number;
     onZoom?: () => void;
     isZoomed?: boolean;
+    colorIndex?: number;
 }
 
 export const MetricChart: React.FC<MetricChartProps> = ({
@@ -28,9 +29,10 @@ export const MetricChart: React.FC<MetricChartProps> = ({
     metricKey,
     smoothing,
     onZoom,
-    isZoomed = false
+    isZoomed = false,
+    colorIndex = 0
 }) => {
-    const colors = ["#EE4C2C", "#fb923c", "#fca5a5", "#fcd34d", "#f87171", "#6366f1", "#10b981"];
+    const colors = ["#EE4C2C", "#facc15", "#fb923c", "#f43f5e", "#c2410c", "#fde047", "#9f1239"];
 
     // Compute EMA for each selected experiment
     const processedData = React.useMemo(() => {
@@ -107,7 +109,7 @@ export const MetricChart: React.FC<MetricChartProps> = ({
 
                         {selectedExps.map((exp, idx) => {
                             const key = `${metricKey}::${exp}`;
-                            const color = colors[idx % colors.length];
+                            const color = colors[(colorIndex + idx) % colors.length];
                             const dataKey = smoothing > 0 ? `${key}_smoothed` : key;
 
                             return (
