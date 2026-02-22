@@ -8,7 +8,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Cell, Gauge, Paragraph, Row, Table, Wrap},
+    widgets::{Block, BorderType, Borders, Cell, Gauge, Padding, Paragraph, Row, Table, Wrap},
     Frame, Terminal,
 };
 use serde::Deserialize;
@@ -120,43 +120,44 @@ fn draw(frame: &mut Frame, state: &AppState) {
 fn accent_color(device: &str) -> Color {
     let d = device.to_lowercase();
     if d.contains("mps") || d.contains("apple") {
-        Color::Magenta
+        Color::Rgb(217, 70, 239) // Fuchsia
     } else if d.contains("cuda") || d.contains("nvidia") {
-        Color::Green
+        Color::Rgb(16, 185, 129) // Emerald
     } else {
-        Color::Yellow
+        Color::Rgb(245, 158, 11) // Amber
     }
 }
 
 fn draw_header(frame: &mut Frame, area: Rect, state: &AppState) {
     let dev_color = accent_color(&state.device);
     let title = Line::from(vec![
-        Span::raw("  "),
-        Span::styled("torchlit", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::raw("   "),
+        Span::styled("torchlit", Style::default().fg(Color::Rgb(249, 115, 22)).add_modifier(Modifier::BOLD)), // Brand Orange
         Span::raw("  ●  "),
-        Span::styled(&state.exp_name, Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+        Span::styled(&state.exp_name, Style::default().fg(Color::Rgb(226, 232, 240)).add_modifier(Modifier::BOLD)), // Slate 200
         Span::raw("    │    "),
-        Span::styled("Model: ", Style::default().fg(Color::DarkGray)),
-        Span::styled(&state.model_name, Style::default().fg(Color::White)),
+        Span::styled("Model: ", Style::default().fg(Color::Rgb(100, 116, 139))), // Slate 500
+        Span::styled(&state.model_name, Style::default().fg(Color::Rgb(241, 245, 249))), // Slate 100
         Span::raw("  │  "),
-        Span::styled("Params: ", Style::default().fg(Color::DarkGray)),
-        Span::styled(&state.total_params, Style::default().fg(Color::White)),
+        Span::styled("Params: ", Style::default().fg(Color::Rgb(100, 116, 139))),
+        Span::styled(&state.total_params, Style::default().fg(Color::Rgb(241, 245, 249))),
         Span::raw("  │  "),
-        Span::styled("Device: ", Style::default().fg(Color::DarkGray)),
-        Span::styled(&state.device, Style::default().fg(dev_color)),
-        Span::raw("  "),
+        Span::styled("Device: ", Style::default().fg(Color::Rgb(100, 116, 139))),
+        Span::styled(&state.device, Style::default().fg(dev_color).add_modifier(Modifier::BOLD)),
+        Span::raw("   "),
     ]);
     let header = Paragraph::new(title)
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Cyan))
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::Rgb(51, 65, 85))) // Slate 700
                 .title(Span::styled(
                     " ⚡ Training ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default().fg(Color::Rgb(249, 115, 22)).add_modifier(Modifier::BOLD),
                 )),
         )
-        .alignment(Alignment::Left);
+        .alignment(Alignment::Center);
     frame.render_widget(header, area);
 }
 
@@ -168,29 +169,29 @@ fn draw_body(frame: &mut Frame, area: Rect, state: &AppState) {
 
 fn draw_metrics_table(frame: &mut Frame, area: Rect, state: &AppState) {
     let header_row = Row::new(vec![
-        Cell::from("Metric").style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-        Cell::from("Value").style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-        Cell::from("Trend").style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+        Cell::from(" Metric").style(Style::default().fg(Color::Rgb(148, 163, 184)).add_modifier(Modifier::BOLD)),
+        Cell::from("Value").style(Style::default().fg(Color::Rgb(148, 163, 184)).add_modifier(Modifier::BOLD)),
+        Cell::from("Trend").style(Style::default().fg(Color::Rgb(148, 163, 184)).add_modifier(Modifier::BOLD)),
     ])
     .height(1)
-    .style(Style::default().bg(Color::Rgb(30, 30, 50)));
+    .style(Style::default().bg(Color::Rgb(30, 41, 59))); // Slate 800
 
     let rows: Vec<Row> = state.latest_metrics.iter().map(|(name, val)| {
         let trend = state.histories.iter().find(|h| h.name == *name).and_then(|h| {
             if h.values.len() >= 2 {
                 let last = *h.values.back().unwrap();
                 let prev = h.values[h.values.len() - 2];
-                if last < prev { Some(("▼", Color::Green)) }
-                else if last > prev { Some(("▲", Color::Red)) }
-                else { Some(("─", Color::DarkGray)) }
+                if last < prev { Some(("▼", Color::Rgb(16, 185, 129))) } // Emerald
+                else if last > prev { Some(("▲", Color::Rgb(244, 63, 94))) } // Rose
+                else { Some(("─", Color::Rgb(100, 116, 139))) }
             } else {
                 None
             }
         });
         let val_str = format!("{:.4}", val);
-        let (trend_sym, trend_color) = trend.unwrap_or(("  ", Color::DarkGray));
+        let (trend_sym, trend_color) = trend.unwrap_or(("  ", Color::Rgb(100, 116, 139)));
         Row::new(vec![
-            Cell::from(name.as_str()).style(Style::default().fg(Color::Cyan)),
+            Cell::from(format!(" {}", name)).style(Style::default().fg(Color::Rgb(226, 232, 240))),
             Cell::from(val_str).style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
             Cell::from(trend_sym).style(Style::default().fg(trend_color).add_modifier(Modifier::BOLD)),
         ])
@@ -202,11 +203,13 @@ fn draw_metrics_table(frame: &mut Frame, area: Rect, state: &AppState) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Blue))
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::Rgb(51, 65, 85)))
                 .title(Span::styled(
                     " 📊 Metrics ",
-                    Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD),
-                )),
+                    Style::default().fg(Color::Rgb(74, 222, 128)).add_modifier(Modifier::BOLD), // Green 400
+                ))
+                .padding(Padding::horizontal(1)),
         )
         .column_spacing(2);
     frame.render_widget(table, area);
@@ -214,7 +217,7 @@ fn draw_metrics_table(frame: &mut Frame, area: Rect, state: &AppState) {
 
 fn draw_right_panel(frame: &mut Frame, area: Rect, state: &AppState) {
     let rows = Layout::vertical([
-        Constraint::Length(5),
+        Constraint::Length(4),
         Constraint::Length(5),
         Constraint::Min(0),
     ])
@@ -235,15 +238,17 @@ fn draw_progress(frame: &mut Frame, area: Rect, state: &AppState) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Green))
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::Rgb(51, 65, 85)))
                 .title(Span::styled(
                     " 🔄 Progress ",
-                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
-                )),
+                    Style::default().fg(Color::Rgb(56, 189, 248)).add_modifier(Modifier::BOLD), // Sky 400
+                ))
+                .padding(Padding::horizontal(1)),
         )
-        .gauge_style(Style::default().fg(Color::Green).bg(Color::Rgb(20, 35, 20)))
+        .gauge_style(Style::default().fg(Color::Rgb(249, 115, 22)).bg(Color::Rgb(30, 41, 59)))
         .ratio(ratio)
-        .label(label);
+        .label(Span::styled(label, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)));
     frame.render_widget(gauge, area);
 }
 
@@ -253,26 +258,28 @@ fn draw_timing(frame: &mut Frame, area: Rect, state: &AppState) {
     let sps = format!("{:.2} steps/s", state.steps_per_sec);
     let text = vec![
         Line::from(vec![
-            Span::styled("Elapsed: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(&elapsed_str, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+            Span::styled(" Elapsed: ", Style::default().fg(Color::Rgb(100, 116, 139))),
+            Span::styled(&elapsed_str, Style::default().fg(Color::Rgb(241, 245, 249)).add_modifier(Modifier::BOLD)),
             Span::raw("   "),
-            Span::styled("ETA: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(eta, Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::styled("ETA: ", Style::default().fg(Color::Rgb(100, 116, 139))),
+            Span::styled(eta, Style::default().fg(Color::Rgb(250, 204, 21)).add_modifier(Modifier::BOLD)), // Yellow 400
         ]),
         Line::from(vec![
-            Span::styled("Speed:   ", Style::default().fg(Color::DarkGray)),
-            Span::styled(sps, Style::default().fg(Color::Cyan)),
+            Span::styled(" Speed:   ", Style::default().fg(Color::Rgb(100, 116, 139))),
+            Span::styled(sps, Style::default().fg(Color::Rgb(6, 182, 212))), // Cyan 500
         ]),
     ];
     let para = Paragraph::new(text)
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Magenta))
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::Rgb(51, 65, 85)))
                 .title(Span::styled(
                     " ⏱ Timing ",
-                    Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
-                )),
+                    Style::default().fg(Color::Rgb(251, 146, 60)).add_modifier(Modifier::BOLD), // Orange 400
+                ))
+                .padding(Padding::horizontal(0)),
         )
         .wrap(Wrap { trim: false });
     frame.render_widget(para, area);
@@ -284,11 +291,13 @@ fn draw_sparklines(frame: &mut Frame, area: Rect, state: &AppState) {
     }
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::DarkGray))
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::Rgb(51, 65, 85)))
         .title(Span::styled(
             " 📈 History ",
-            Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD),
-        ));
+            Style::default().fg(Color::Rgb(167, 139, 250)).add_modifier(Modifier::BOLD), // Violet 400
+        ))
+        .padding(Padding::horizontal(1));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -309,8 +318,8 @@ fn draw_sparklines(frame: &mut Frame, area: Rect, state: &AppState) {
             .map(|v| bars[(((v - min) / range) * 7.0).round() as usize].min(bars[7]))
             .collect();
         let line = Line::from(vec![
-            Span::styled(format!("{:<width$}", hist.name, width = name_len), Style::default().fg(Color::DarkGray)),
-            Span::styled(spark_chars, Style::default().fg(Color::Blue)),
+            Span::styled(format!("{:<width$}", hist.name, width = name_len), Style::default().fg(Color::Rgb(148, 163, 184))),
+            Span::styled(spark_chars, Style::default().fg(Color::Rgb(139, 92, 246))), // Violet 500
         ]);
         frame.render_widget(Paragraph::new(line), spark_rows[i]);
     }
@@ -320,16 +329,19 @@ fn draw_footer(frame: &mut Frame, area: Rect, state: &AppState) {
     let status = if state.is_done {
         Span::styled(
             format!(" ✅ Training Complete — {} steps ", state.current_step),
-            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+            Style::default().fg(Color::Rgb(16, 185, 129)).add_modifier(Modifier::BOLD),
         )
     } else {
         Span::styled(
             " Press 'q' to detach from display (training continues) ",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(Color::Rgb(148, 163, 184)),
         )
     };
     let footer = Paragraph::new(Line::from(vec![status]))
-        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::DarkGray)))
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::Rgb(51, 65, 85))))
         .alignment(Alignment::Center);
     frame.render_widget(footer, area);
 }
