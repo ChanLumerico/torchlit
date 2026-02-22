@@ -50,7 +50,7 @@ def run_real_test():
         global_step = 0
 
         for epoch in range(1, 4):  # Train for 3 quick epochs
-            print(f"--- Epoch {epoch} ---")
+
             for batch in dataloader:
                 global_step += 1
 
@@ -81,11 +81,6 @@ def run_real_test():
                     },
                     step=global_step,
                 )
-
-                if global_step % 5 == 0:
-                    print(
-                        f"Step {global_step} | Loss: {loss.item():.4f} | Acc: {acc:.4f}"
-                    )
 
 
 if __name__ == "__main__":

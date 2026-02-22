@@ -1,19 +1,48 @@
 import contextlib
+import json
+import os
+import platform
+import subprocess
 import threading
 import time
 import requests
 import queue
 import psutil
 import socket
-import subprocess
 import sys
+from pathlib import Path
 from typing import Dict, Any, Optional
+
+
+def _get_bin_path() -> Path:
+    """Return the path to the platform-specific torchlit-progress binary."""
+    system = platform.system()  # Darwin, Linux, Windows
+    machine = platform.machine()  # arm64, x86_64, AMD64
+
+    if system == "Darwin":
+        suffix = f"darwin-{machine}"  # darwin-arm64 | darwin-x86_64
+    elif system == "Linux":
+        suffix = f"linux-{machine}"  # linux-x86_64 | linux-aarch64
+    elif system == "Windows":
+        suffix = f"windows-x86_64.exe"  # windows-x86_64.exe
+    else:
+        suffix = None
+
+    if suffix is None:
+        return Path()  # Empty path — will not exist, falls back gracefully
+
+    return Path(__file__).parent / "bin" / f"torchlit-progress-{suffix}"
+
+
+_BIN_PATH = _get_bin_path()
 
 
 class Monitor(contextlib.ContextDecorator):
     """
     Context manager and decorator for monitoring PyTorch training loops.
     Sends real-time telemetry to the local torchlit visualization server.
+    Launches a Rust-based CLI display (torchlit-progress) for terminal progress.
+    Falls back to plain text if the binary is not available.
     """
 
     def __init__(
@@ -25,6 +54,7 @@ class Monitor(contextlib.ContextDecorator):
         model: Optional[Any] = None,
         optimizer: Optional[Any] = None,
         start_server: bool = True,
+        total_steps: Optional[int] = None,
     ):
         self.exp_name = exp_name
         self.server_url = (
@@ -35,6 +65,7 @@ class Monitor(contextlib.ContextDecorator):
         self.model = model
         self.optimizer = optimizer
         self.start_server = start_server
+        self.total_steps = total_steps
 
         self.queue = queue.Queue()
         self.is_running = False
@@ -61,6 +92,10 @@ class Monitor(contextlib.ContextDecorator):
         # Auto-extract model info if provided
         if self.model is not None:
             self._extract_model_info()
+
+        # Rust CLI display state
+        self._cli_proc: Optional[subprocess.Popen] = None
+        self._start_time: Optional[float] = None
 
     def _format_num(self, num: int) -> str:
         if num >= 1e9:
@@ -128,8 +163,7 @@ class Monitor(contextlib.ContextDecorator):
 
             self.model_info["architecture"] = _get_module_tree(self.model)
 
-        except Exception as e:
-            # Silently fail if model is not a standard PyTorch module
+        except Exception:
             pass
 
     def _start_server_if_needed(self):
@@ -160,19 +194,82 @@ class Monitor(contextlib.ContextDecorator):
                         ],
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
-                        start_new_session=True,  # Make it a daemon
+                        start_new_session=True,
                     )
-                    time.sleep(1.5)  # Give it a moment to boot
+                    time.sleep(1.5)
         except Exception as e:
             print(f"⚠️ torchlit could not start background server: {e}")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Rust CLI Display
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _write_cli(self, msg: dict) -> None:
+        """Write a JSON message line to the Rust CLI process stdin."""
+        if self._cli_proc is not None and self._cli_proc.poll() is None:
+            try:
+                line = json.dumps(msg) + "\n"
+                self._cli_proc.stdin.write(line.encode())
+                self._cli_proc.stdin.flush()
+            except (BrokenPipeError, OSError):
+                self._cli_proc = None
+
+    def _start_cli(self) -> None:
+        """Spawn the Rust CLI binary as a subprocess."""
+        if not _BIN_PATH.exists():
+            return  # Binary not compiled yet — skip silently
+
+        try:
+            self._cli_proc = subprocess.Popen(
+                [str(_BIN_PATH)],
+                stdin=subprocess.PIPE,
+                stdout=None,  # inherit terminal
+                stderr=subprocess.DEVNULL,
+            )
+            # Give Rust process a moment to initialize before writing
+            time.sleep(0.15)
+            # Send init message
+            self._write_cli(
+                {
+                    "type": "init",
+                    "exp_name": self.exp_name,
+                    "model_name": self.model_info.get("name"),
+                    "total_params": self.model_info.get("total_params"),
+                    "trainable_params": self.model_info.get("trainable_params"),
+                    "device": self.device_name,
+                    "total_steps": self.total_steps,
+                }
+            )
+        except Exception:
+            self._cli_proc = None
+
+    def _stop_cli(self, final_step: int = 0) -> None:
+        """Send done message and wait for the Rust CLI to exit cleanly."""
+        if self._cli_proc is None:
+            return
+        try:
+            self._write_cli({"type": "done", "step": final_step})
+            self._cli_proc.stdin.close()
+            self._cli_proc.wait(timeout=5)
+        except Exception:
+            try:
+                self._cli_proc.terminate()
+            except Exception:
+                pass
+        self._cli_proc = None
+
+    # ─────────────────────────────────────────────────────────────────────────
 
     def __enter__(self):
         if self.start_server:
             self._start_server_if_needed()
 
+        self._start_time = time.time()
         self.is_running = True
         self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
         self.worker_thread.start()
+
+        self._start_cli()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -182,6 +279,8 @@ class Monitor(contextlib.ContextDecorator):
 
         # Flush remaining queued items
         self._flush_queue()
+
+        self._stop_cli(final_step=self._last_step)
 
         if self.start_server:
             try:
@@ -199,11 +298,26 @@ class Monitor(contextlib.ContextDecorator):
             except requests.RequestException:
                 pass
 
-        return False  # Do not suppress exceptions
+        return False
+
+    _last_step: int = 0
 
     def log(self, metrics: Dict[str, Any], step: int):
-        """Queue metrics to be sent to the server"""
+        """Queue metrics for the server and push to the Rust CLI display."""
+        self._last_step = step
+        elapsed = time.time() - self._start_time if self._start_time else 0.0
+
         self.queue.put({"step": step, "metrics": metrics})
+
+        # Push to Rust TUI
+        self._write_cli(
+            {
+                "type": "step",
+                "step": step,
+                "metrics": metrics,
+                "elapsed": elapsed,
+            }
+        )
 
     def _get_system_stats(self) -> Dict[str, Any]:
         """Collect system usage metrics"""
@@ -223,7 +337,6 @@ class Monitor(contextlib.ContextDecorator):
                     if mem_total > 0:
                         stats["vram_percent"] = (mem_alloc / mem_total) * 100
                 elif self.device_type == "mps":
-                    # Apple Silicon unified memory VRAM proxy
                     alloc = self._torch.mps.current_allocated_memory()
                     total = psutil.virtual_memory().total
                     stats["vram_percent"] = (alloc / total) * 100
@@ -261,5 +374,4 @@ class Monitor(contextlib.ContextDecorator):
         try:
             requests.post(f"{self.server_url}/api/log", json=payload, timeout=1.0)
         except requests.RequestException:
-            # We silently ignore connection errors to not crash training loop
             pass

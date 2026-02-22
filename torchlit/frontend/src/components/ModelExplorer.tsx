@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Layers, ChevronDown, ChevronRight, Hash, Box } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Layers, ChevronDown, ChevronRight, Hash, Box, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import type { ModelInfo, ArchitectureNode } from '../types';
 
 interface ModelExplorerProps {
@@ -26,10 +26,18 @@ const getModuleColor = (className: string) => {
     return 'text-brand/80 bg-brand/10 border-brand/20';
 };
 
-const TreeNode: React.FC<{ node: ArchitectureNode; depth: number }> = ({ node, depth }) => {
+// null = use default, true = force expand all, false = force collapse all
+const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: boolean | null }> = ({ node, depth, forceExpand }) => {
     const hasChildren = node.children && node.children.length > 0;
-    const [isExpanded, setIsExpanded] = useState(depth < 2); // Auto-expand first 2 levels
+    const [isExpanded, setIsExpanded] = useState(depth < 2);
     const colorClass = getModuleColor(node.class_name);
+
+    // Sync with global expand/collapse signal
+    useEffect(() => {
+        if (forceExpand !== null && hasChildren) {
+            setIsExpanded(forceExpand);
+        }
+    }, [forceExpand, hasChildren]);
 
     return (
         <div className="flex flex-col">
@@ -71,7 +79,7 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number }> = ({ node, d
             {hasChildren && isExpanded && (
                 <div className="flex flex-col border-l border-slate-800/60 ml-3">
                     {node.children.map((child, idx) => (
-                        <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} />
+                        <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} forceExpand={forceExpand} />
                     ))}
                 </div>
             )}
@@ -80,6 +88,23 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number }> = ({ node, d
 };
 
 export const ModelExplorer: React.FC<ModelExplorerProps> = ({ modelInfo }) => {
+    // null = natural state, true = all expanded, false = all collapsed
+    const [forceExpand, setForceExpand] = useState<boolean | null>(null);
+    const [allExpanded, setAllExpanded] = useState(false);
+
+    const handleExpandAll = () => {
+        setAllExpanded(true);
+        setForceExpand(true);
+        // Reset to null after a tick so individual toggles work again
+        setTimeout(() => setForceExpand(null), 50);
+    };
+
+    const handleCollapseAll = () => {
+        setAllExpanded(false);
+        setForceExpand(false);
+        setTimeout(() => setForceExpand(null), 50);
+    };
+
     if (!modelInfo) {
         return (
             <div className="h-96 flex flex-col items-center justify-center text-slate-500 bg-slate-800/20 border border-slate-800 rounded-3xl border-dashed">
@@ -104,11 +129,39 @@ export const ModelExplorer: React.FC<ModelExplorerProps> = ({ modelInfo }) => {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    {/* Expand / Collapse All buttons */}
+                    <div className="flex items-center gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50">
+                        <button
+                            onClick={handleExpandAll}
+                            title="Expand All"
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200
+                                ${allExpanded
+                                    ? 'bg-slate-700/80 text-white shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/40'}`}
+                        >
+                            <ChevronsUpDown className="w-3.5 h-3.5" />
+                            Expand All
+                        </button>
+                        <button
+                            onClick={handleCollapseAll}
+                            title="Collapse All"
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200
+                                ${!allExpanded
+                                    ? 'bg-slate-700/80 text-white shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/40'}`}
+                        >
+                            <ChevronsDownUp className="w-3.5 h-3.5" />
+                            Collapse All
+                        </button>
+                    </div>
+
+                    <div className="h-8 w-px bg-slate-800" />
+
                     <div className="flex flex-col items-end">
                         <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Total Params</span>
                         <span className="text-lg font-semibold text-slate-200">{modelInfo.total_params}</span>
                     </div>
-                    <div className="h-8 w-px bg-slate-800"></div>
+                    <div className="h-8 w-px bg-slate-800" />
                     <div className="flex flex-col items-end">
                         <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Trainable</span>
                         <span className="text-lg font-semibold text-emerald-400">{modelInfo.trainable_params}</span>
@@ -119,7 +172,7 @@ export const ModelExplorer: React.FC<ModelExplorerProps> = ({ modelInfo }) => {
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 {modelInfo.architecture ? (
                     <div className="bg-[#0b0f19] rounded-2xl p-4 border border-slate-800/50 shadow-inner">
-                        <TreeNode node={modelInfo.architecture} depth={0} />
+                        <TreeNode node={modelInfo.architecture} depth={0} forceExpand={forceExpand} />
                     </div>
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center text-slate-500">
