@@ -156,7 +156,7 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
             </div>
 
             {hasChildren && isExpanded && (
-                <div className={`flex flex-col ml-3 mt-1 relative border-l-2 ${theme.borderLeft} rounded-bl-xl pl-1 bg-gradient-to-br from-black/20 to-transparent`}>
+                <div className={`flex flex-col ml-3 mt-1 pt-1 relative border-l-2 ${theme.borderLeft} rounded-bl-xl rounded-tl-xl pl-1 bg-gradient-to-br from-black/20 to-transparent`}>
                     {node.children.map((child, idx) => (
                         <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} forceExpand={forceExpand} />
                     ))}
