@@ -49,7 +49,7 @@ def run_real_test():
         model.train()
         global_step = 0
 
-        for epoch in range(1, 4):  # Train for 3 quick epochs
+        for epoch in range(1, 10):  # Train for 3 quick epochs
 
             for batch in dataloader:
                 global_step += 1
@@ -73,12 +73,7 @@ def run_real_test():
 
                 # Log to Torchlit dynamically!
                 logger.log(
-                    {
-                        "loss": loss.item(),
-                        "accuracy": acc,
-                        "learning_rate": optimizer.param_groups[0]["lr"],
-                        "epoch": epoch,
-                    },
+                    {"loss": loss.item(), "accuracy": acc},
                     step=global_step,
                 )
 
