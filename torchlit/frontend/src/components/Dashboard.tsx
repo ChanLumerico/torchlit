@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Activity, ServerCrash, Zap, Monitor, HardDrive, Filter, Layers, X, DownloadCloud } from 'lucide-react';
+import { Activity, ServerCrash, Zap, Monitor, HardDrive, Filter, Layers, X, DownloadCloud, PanelRight } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { MetricChart } from './MetricChart';
 import { Sparkline } from './Sparkline';
+import { ModelExplorer } from './ModelExplorer';
 import { ComparisonTable } from './ComparisonTable';
 import type { MetricLog, SysStats, ModelInfo } from '../types';
 
@@ -26,6 +27,9 @@ export const Dashboard: React.FC = () => {
     // UI states
     const [smoothing, setSmoothing] = useState<number>(0.6);
     const [zoomedChart, setZoomedChart] = useState<string | null>(null);
+    const [confirmClear, setConfirmClear] = useState<boolean>(false);
+    const [isPanelOpen, setIsPanelOpen] = useState<boolean>(true);
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'architecture'>('dashboard');
 
     const sockets = useRef<Map<string, WebSocket>>(new Map());
 
@@ -61,9 +65,12 @@ export const Dashboard: React.FC = () => {
     };
 
     const handleClearAll = async () => {
-        if (!confirm("Are you sure you want to clear ALL training sessions? This cannot be undone.")) {
+        if (!confirmClear) {
+            setConfirmClear(true);
+            setTimeout(() => setConfirmClear(false), 3000);
             return;
         }
+        setConfirmClear(false);
         try {
             const response = await fetch(`${API_URL}/api/experiments/clear`, { method: 'POST' });
             if (response.ok) {
@@ -143,6 +150,14 @@ export const Dashboard: React.FC = () => {
 
                 socket.onmessage = (event) => {
                     const data: MetricLog = JSON.parse(event.data);
+
+                    // Update model info if there are actual keys
+                    if (data.model_info && Object.keys(data.model_info).length > 0) {
+                        setModelInfos(prev => ({
+                            ...prev,
+                            [exp]: { ...prev[exp], ...data.model_info }
+                        }));
+                    }
                     setLastUpdate(Date.now());
 
                     const flatData = {
@@ -173,9 +188,7 @@ export const Dashboard: React.FC = () => {
                         });
                     }
 
-                    if (data.model_info) {
-                        setModelInfos(prev => ({ ...prev, [exp]: data.model_info! }));
-                    }
+                    // The `model_info` update is handled robustly at the beginning of the callback.
                 };
 
                 sockets.current.set(exp, socket);
@@ -243,248 +256,288 @@ export const Dashboard: React.FC = () => {
             {/* Main Layout Area */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
                 {/* Top Navbar */}
-                <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#0b0f19]/80 border-b border-slate-800/80 px-8 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-brand/20 p-2 rounded-xl">
-                            <Zap className="text-brand w-6 h-6" />
+                <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#0b0f19]/80 border-b border-slate-800/80 px-8 h-16 shrink-0 flex items-center justify-between">
+                    <div className="flex items-center gap-12 flex-1">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-brand/20 p-2 rounded-xl">
+                                <Zap className="text-brand w-6 h-6" />
+                            </div>
+                            <h1 className="text-2xl font-bold bg-gradient-to-r from-brand to-purple-400 bg-clip-text text-transparent">
+                                torchlit
+                            </h1>
                         </div>
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-brand to-purple-400 bg-clip-text text-transparent">
-                            torchlit
-                        </h1>
+
+                        {/* Navigation Tabs */}
+                        <div className="flex items-center gap-1 bg-slate-800/40 p-1 rounded-xl border border-slate-700/50">
+                            <button
+                                onClick={() => setActiveTab('dashboard')}
+                                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-slate-700/80 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/40'}`}
+                            >
+                                Dashboard
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('architecture')}
+                                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'architecture' ? 'bg-slate-700/80 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/40'}`}
+                            >
+                                Model Explorer
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setIsPanelOpen(!isPanelOpen)}
+                            className={`p-2 rounded-xl transition-colors border ${isPanelOpen ? 'bg-brand/10 text-brand border-brand/20' : 'bg-slate-800/50 text-slate-400 border-slate-700/50 hover:text-brand hover:border-brand/30'}`}
+                            title="Toggle Control Panel"
+                        >
+                            <PanelRight className="w-5 h-5" />
+                        </button>
                     </div>
                 </nav>
 
-                {/* Main Content */}
+                {/* Main Content Area */}
                 <main className="w-full max-w-7xl mx-auto px-8 py-8 space-y-8 pb-20">
 
-                    {/* Model Summary Banner (Primary selected session) */}
-                    {selectedExps.length > 0 && modelInfos[selectedExps[0]] && (
-                        <div className="bg-gradient-to-r from-brand/10 to-transparent border border-brand/20 p-6 rounded-3xl mb-8">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="bg-brand/20 p-3 rounded-2xl">
-                                    <Layers className="text-brand w-6 h-6" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="text-xl font-bold text-slate-100">{modelInfos[selectedExps[0]].name || 'PyTorch Model'}</h3>
-                                    <p className="text-brand text-sm font-medium">Model Architecture Overview ({selectedExps[0]})</p>
-                                </div>
-                                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border shadow-sm ${isTraining ? 'bg-brand/10 text-brand border-brand/20' : 'bg-slate-800/50 text-slate-500 border-slate-700/50'}`}>
-                                    <span className={`w-2 h-2 rounded-full ${isTraining ? 'bg-brand animate-pulse' : 'bg-slate-600'}`}></span>
-                                    {isTraining ? 'Training Active' : 'Stopped'}
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {modelInfos[selectedExps[0]].total_params && (
-                                    <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
-                                        <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Total Params</p>
-                                        <p className="text-lg font-semibold text-slate-200">{modelInfos[selectedExps[0]].total_params}</p>
-                                    </div>
-                                )}
-                                {modelInfos[selectedExps[0]].trainable_params && (
-                                    <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
-                                        <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Trainable Params</p>
-                                        <p className="text-lg font-semibold text-slate-200">{modelInfos[selectedExps[0]].trainable_params}</p>
-                                    </div>
-                                )}
-                                {modelInfos[selectedExps[0]].activation_size && (
-                                    <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
-                                        <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Activation Size</p>
-                                        <p className="text-lg font-semibold text-slate-200">{modelInfos[selectedExps[0]].activation_size}</p>
-                                    </div>
-                                )}
-                                {Object.entries(modelInfos[selectedExps[0]])
-                                    .filter(([key]) => !['name', 'total_params', 'trainable_params', 'activation_size'].includes(key))
-                                    .map(([key, value]) => (
-                                        <div key={key} className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
-                                            <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">{key.replace(/_/g, ' ')}</p>
-                                            <p className="text-lg font-semibold text-slate-200">{String(value)}</p>
-                                        </div>
-                                    ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* System Stats Header (Primary) */}
-                    {selectedExps.length > 0 && latestStats[selectedExps[0]] && (() => {
-                        const primaryStats = latestStats[selectedExps[0]];
-                        return (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="relative overflow-hidden bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-3xl flex items-center justify-between shadow-lg">
-                                    <Sparkline data={historicalStats[selectedExps[0]] || []} dataKey="cpu_percent" color="#3b82f6" />
-                                    <div className="relative z-10">
-                                        <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Compute Usage</p>
-                                        <h2 className="text-4xl font-light text-slate-100">
-                                            {primaryStats.cpu_percent.toFixed(1)}%
-                                        </h2>
-                                        <p className="text-slate-500 text-xs mt-2 uppercase flex items-center gap-1">
-                                            Primary: <span className="text-brand font-semibold">{selectedExps[0]}</span>
-                                        </p>
-                                    </div>
-                                    <div className="bg-blue-500/20 p-4 rounded-2xl relative z-10">
-                                        <Monitor className="text-blue-400 w-8 h-8" />
-                                    </div>
-                                </div>
-
-                                <div className="relative overflow-hidden bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-3xl flex items-center justify-between shadow-lg">
-                                    <Sparkline
-                                        data={historicalStats[selectedExps[0]] || []}
-                                        dataKey={primaryStats.device_type !== 'cpu' ? 'vram_percent' : 'ram_percent'}
-                                        color="#10b981"
-                                    />
-                                    <div className="relative z-10">
-                                        <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">
-                                            {primaryStats.device_type !== 'cpu' ? 'VRAM Usage' : 'RAM Usage'}
-                                        </p>
-                                        <h2 className="text-4xl font-light text-slate-100">
-                                            {primaryStats.vram_percent != null
-                                                ? primaryStats.vram_percent.toFixed(1)
-                                                : (primaryStats.ram_percent?.toFixed(1) || '--')}%
-                                        </h2>
-                                        <p className="text-slate-500 text-xs mt-2 uppercase">
-                                            Device: <span className="text-emerald-400 font-semibold">{primaryStats.device_name || 'CPU'}</span>
-                                        </p>
-                                    </div>
-                                    <div className="bg-emerald-500/20 p-4 rounded-2xl relative z-10">
-                                        <HardDrive className="text-emerald-400 w-8 h-8" />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })()}
-
-                    {/* Charts Grid */}
-                    {mergedData.length > 0 ? (
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                            {metricKeys.map((key) => (
-                                <MetricChart
-                                    key={key}
-                                    title={key}
-                                    data={mergedData}
-                                    selectedExps={selectedExps}
-                                    metricKey={key}
-                                    smoothing={smoothing}
-                                    onZoom={() => setZoomedChart(key)}
-                                />
-                            ))}
-                        </div>
+                    {activeTab === 'architecture' ? (
+                        <ModelExplorer modelInfo={selectedExps.length > 0 ? modelInfos[selectedExps[0]] : null} />
                     ) : (
-                        <div className="h-96 flex flex-col items-center justify-center text-slate-500 bg-slate-800/20 border border-slate-800 rounded-3xl border-dashed">
-                            <Activity className="w-12 h-12 mb-4 opacity-50" />
-                            <p className="text-lg font-medium">Waiting for training data...</p>
-                            <p className="text-sm">Start your PyTorch loop with the torchlit Monitor.</p>
-                        </div>
-                    )}
+                        <>
 
-                    {/* Comparison Table */}
-                    <ComparisonTable
-                        selectedExps={selectedExps}
-                        allMetrics={allMetrics}
-                        metricKeys={metricKeys}
-                    />
+                            {/* Model Summary Banner (Primary selected session) */}
+                            {selectedExps.length > 0 && modelInfos[selectedExps[0]] && (
+                                <div className="bg-gradient-to-r from-brand/10 to-transparent border border-brand/20 p-6 rounded-3xl mb-8">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="bg-brand/20 p-3 rounded-2xl">
+                                            <Layers className="text-brand w-6 h-6" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-xl font-bold text-slate-100">{modelInfos[selectedExps[0]].name || 'PyTorch Model'}</h3>
+                                            <p className="text-brand text-sm font-medium">Model Architecture Overview ({selectedExps[0]})</p>
+                                        </div>
+                                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border shadow-sm ${isTraining ? 'bg-brand/10 text-brand border-brand/20' : 'bg-slate-800/50 text-slate-500 border-slate-700/50'}`}>
+                                            <span className={`w-2 h-2 rounded-full ${isTraining ? 'bg-brand animate-pulse' : 'bg-slate-600'}`}></span>
+                                            {isTraining ? 'Training Active' : 'Stopped'}
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {modelInfos[selectedExps[0]].total_params && (
+                                            <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
+                                                <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Total Params</p>
+                                                <p className="text-lg font-semibold text-slate-200">{modelInfos[selectedExps[0]].total_params}</p>
+                                            </div>
+                                        )}
+                                        {modelInfos[selectedExps[0]].trainable_params && (
+                                            <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
+                                                <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Trainable Params</p>
+                                                <p className="text-lg font-semibold text-slate-200">{modelInfos[selectedExps[0]].trainable_params}</p>
+                                            </div>
+                                        )}
+                                        {modelInfos[selectedExps[0]].activation_size && (
+                                            <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
+                                                <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Activation Size</p>
+                                                <p className="text-lg font-semibold text-slate-200">{modelInfos[selectedExps[0]].activation_size}</p>
+                                            </div>
+                                        )}
+                                        {Object.entries(modelInfos[selectedExps[0]])
+                                            .filter(([key]) => !['name', 'total_params', 'trainable_params', 'activation_size'].includes(key))
+                                            .map(([key, value]) => (
+                                                <div key={key} className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50">
+                                                    <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">{key.replace(/_/g, ' ')}</p>
+                                                    <p className="text-lg font-semibold text-slate-200">{String(value)}</p>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* System Stats Header (Primary) */}
+                            {selectedExps.length > 0 && latestStats[selectedExps[0]] && (() => {
+                                const primaryStats = latestStats[selectedExps[0]];
+                                return (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="relative overflow-hidden bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-3xl flex items-center justify-between shadow-lg">
+                                            <Sparkline data={historicalStats[selectedExps[0]] || []} dataKey="cpu_percent" color="#3b82f6" />
+                                            <div className="relative z-10">
+                                                <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Compute Usage</p>
+                                                <h2 className="text-4xl font-light text-slate-100">
+                                                    {primaryStats.cpu_percent.toFixed(1)}%
+                                                </h2>
+                                                <p className="text-slate-500 text-xs mt-2 uppercase flex items-center gap-1">
+                                                    Primary: <span className="text-brand font-semibold">{selectedExps[0]}</span>
+                                                </p>
+                                            </div>
+                                            <div className="bg-blue-500/20 p-4 rounded-2xl relative z-10">
+                                                <Monitor className="text-blue-400 w-8 h-8" />
+                                            </div>
+                                        </div>
+
+                                        <div className="relative overflow-hidden bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-3xl flex items-center justify-between shadow-lg">
+                                            <Sparkline
+                                                data={historicalStats[selectedExps[0]] || []}
+                                                dataKey={primaryStats.device_type !== 'cpu' ? 'vram_percent' : 'ram_percent'}
+                                                color="#10b981"
+                                            />
+                                            <div className="relative z-10">
+                                                <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">
+                                                    {primaryStats.device_type !== 'cpu' ? 'VRAM Usage' : 'RAM Usage'}
+                                                </p>
+                                                <h2 className="text-4xl font-light text-slate-100">
+                                                    {primaryStats.vram_percent != null
+                                                        ? primaryStats.vram_percent.toFixed(1)
+                                                        : (primaryStats.ram_percent?.toFixed(1) || '--')}%
+                                                </h2>
+                                                <p className="text-slate-500 text-xs mt-2 uppercase">
+                                                    Device: <span className="text-emerald-400 font-semibold">{primaryStats.device_name || 'CPU'}</span>
+                                                </p>
+                                            </div>
+                                            <div className="bg-emerald-500/20 p-4 rounded-2xl relative z-10">
+                                                <HardDrive className="text-emerald-400 w-8 h-8" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Charts Grid */}
+                            {mergedData.length > 0 ? (
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                    {metricKeys.map((key) => (
+                                        <MetricChart
+                                            key={key}
+                                            title={key}
+                                            data={mergedData}
+                                            selectedExps={selectedExps}
+                                            metricKey={key}
+                                            smoothing={smoothing}
+                                            onZoom={() => setZoomedChart(key)}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="h-96 flex flex-col items-center justify-center text-slate-500 bg-slate-800/20 border border-slate-800 rounded-3xl border-dashed">
+                                    <Activity className="w-12 h-12 mb-4 opacity-50" />
+                                    <p className="text-lg font-medium">Waiting for training data...</p>
+                                    <p className="text-sm">Start your PyTorch loop with the torchlit Monitor.</p>
+                                </div>
+                            )}
+
+                            {/* Comparison Table */}
+                            <ComparisonTable
+                                selectedExps={selectedExps}
+                                allMetrics={allMetrics}
+                                metricKeys={metricKeys}
+                            />
+                        </>
+                    )}
 
                 </main>
             </div> {/* End Main Layout Area */}
 
             {/* Right Control Panel */}
-            <aside className="w-80 shrink-0 bg-[#0d1320] border-l border-slate-800/80 flex flex-col h-screen overflow-y-auto z-40">
-                <div className="sticky top-0 bg-[#0d1320] z-10 p-5 border-b border-slate-800/80 flex items-center justify-between">
-                    <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                        <Filter className="w-4 h-4 text-brand" />
-                        Control Panel
-                    </h2>
-                    <div className={`flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${isConnected ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                        {isConnected ? <Activity className="w-3 h-3 animate-pulse" /> : <ServerCrash className="w-3 h-3" />}
-                        {isConnected ? 'Live' : 'Offline'}
-                    </div>
-                </div>
-
-                <div className="p-5 space-y-8">
-                    {/* Session Selector List */}
-                    <div>
-                        <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Active Sessions</h3>
-                        <div className="space-y-2">
-                            {experiments.length === 0 ? (
-                                <div className="p-3 text-sm text-slate-500 bg-slate-800/30 rounded-xl border border-slate-800 border-dashed text-center">
-                                    No sessions found
-                                </div>
-                            ) : (
-                                experiments.map(exp => {
-                                    const isSelected = selectedExps.includes(exp);
-                                    return (
-                                        <div
-                                            key={exp}
-                                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${isSelected ? 'bg-brand/10 border-brand/50' : 'bg-slate-800/50 border-slate-700/50 hover:bg-slate-700/50'}`}
-                                            onClick={() => {
-                                                if (isSelected) {
-                                                    setSelectedExps(prev => prev.filter(e => e !== exp));
-                                                } else {
-                                                    setSelectedExps(prev => [...prev, exp]);
-                                                }
-                                            }}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-3.5 h-3.5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-brand border-brand' : 'border-slate-600'}`}>
-                                                    {isSelected && <Activity size={8} className="text-white" />}
-                                                </div>
-                                                <span className={`text-sm font-medium truncate max-w-[150px] ${isSelected ? 'text-brand' : 'text-slate-300'}`}>{exp}</span>
-                                            </div>
-                                            <button
-                                                onClick={(e) => handleDeleteExp(exp, e)}
-                                                className="p-1.5 rounded-full text-slate-500 hover:bg-slate-600 hover:text-red-400 transition-colors"
-                                                title="Delete Session"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    );
-                                })
-                            )}
+            {isPanelOpen && (
+                <aside className="w-80 shrink-0 bg-[#0d1320] border-l border-slate-800/80 flex flex-col h-screen overflow-y-auto z-40 relative animate-in slide-in-from-right-10 duration-200">
+                    <div className="sticky top-0 bg-[#0d1320] z-10 px-5 h-16 shrink-0 border-b border-slate-800/80 flex items-center justify-between">
+                        <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
+                            <Filter className="w-4 h-4 text-brand" />
+                            Control Panel
+                        </h2>
+                        <div className={`flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${isConnected ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                            {isConnected ? <Activity className="w-3 h-3 animate-pulse" /> : <ServerCrash className="w-3 h-3" />}
+                            {isConnected ? 'Live' : 'Offline'}
                         </div>
                     </div>
 
-                    {/* Smoothing Slider */}
-                    <div>
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Chart Smoothing</h3>
-                            <span className="text-xs font-mono text-brand font-bold bg-brand/10 px-2 py-0.5 rounded-md">{smoothing.toFixed(2)}</span>
+                    <div className="p-5 space-y-8">
+                        {/* Session Selector List */}
+                        <div>
+                            <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Active Sessions</h3>
+                            <div className="space-y-2">
+                                {experiments.length === 0 ? (
+                                    <div className="p-3 text-sm text-slate-500 bg-slate-800/30 rounded-xl border border-slate-800 border-dashed text-center">
+                                        No sessions found
+                                    </div>
+                                ) : (
+                                    <ul className="space-y-1">
+                                        {experiments.map(exp => {
+                                            const isSelected = selectedExps.includes(exp);
+                                            return (
+                                                <li
+                                                    key={exp}
+                                                    className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors group ${isSelected ? 'bg-brand/10 text-brand' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white'}`}
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setSelectedExps(prev => prev.filter(e => e !== exp));
+                                                        } else {
+                                                            setSelectedExps(prev => [...prev, exp]);
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full border transition-colors ${isSelected ? 'bg-brand border-brand shadow-[0_0_5px_rgba(59,130,246,0.6)]' : 'border-slate-600 bg-transparent group-hover:border-slate-400'}`} />
+                                                        <span className="text-sm font-medium truncate max-w-[160px]">{exp}</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={(e) => handleDeleteExp(exp, e)}
+                                                        className={`p-1 rounded-md text-slate-500 hover:bg-red-500/20 hover:text-red-400 transition-all ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                                        title="Delete Session"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-3 bg-slate-800/30 p-4 rounded-xl border border-slate-700/50">
-                            <input
-                                type="range"
-                                min="0"
-                                max="0.99"
-                                step="0.01"
-                                value={smoothing}
-                                onChange={(e) => setSmoothing(parseFloat(e.target.value))}
-                                className="flex-1 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand"
-                            />
-                        </div>
-                    </div>
 
-                    {/* Data Actions */}
-                    <div>
-                        <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Data Actions</h3>
-                        <div className="space-y-2">
-                            <button
-                                onClick={handleExportCSV}
-                                className="w-full flex items-center justify-center gap-2 text-sm font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 p-3 rounded-xl border border-slate-700 transition-colors"
-                            >
-                                <DownloadCloud className="w-4 h-4 text-brand" />
-                                Export CSV
-                            </button>
-                            {experiments.length > 0 && (
+                        {/* Smoothing Slider */}
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Chart Smoothing</h3>
+                                <span className="text-xs font-mono text-brand font-bold bg-brand/10 px-2 py-0.5 rounded-md">{smoothing.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center gap-3 bg-slate-800/30 p-4 rounded-xl border border-slate-700/50">
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="0.99"
+                                    step="0.01"
+                                    value={smoothing}
+                                    onChange={(e) => setSmoothing(parseFloat(e.target.value))}
+                                    className="flex-1 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Data Actions */}
+                        <div>
+                            <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Data Actions</h3>
+                            <div className="space-y-2">
                                 <button
-                                    onClick={handleClearAll}
-                                    className="w-full flex items-center justify-center gap-2 text-sm font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 p-3 rounded-xl border border-red-500/20 transition-colors"
+                                    onClick={handleExportCSV}
+                                    className="w-full flex items-center justify-center gap-2 text-sm font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 p-3 rounded-xl border border-slate-700 transition-colors"
                                 >
-                                    <X className="w-4 h-4" />
-                                    Clear All Data
+                                    <DownloadCloud className="w-4 h-4 text-brand" />
+                                    Export CSV
                                 </button>
-                            )}
+                                {experiments.length > 0 && (
+                                    <button
+                                        onClick={handleClearAll}
+                                        className={`w-full flex items-center justify-center gap-2 text-sm font-medium p-3 rounded-xl border transition-colors ${confirmClear
+                                            ? 'bg-red-500 text-white border-red-500 hover:bg-red-600'
+                                            : 'text-red-400 bg-red-500/10 hover:bg-red-500/20 border-red-500/20'
+                                            }`}
+                                    >
+                                        <X className="w-4 h-4" />
+                                        {confirmClear ? "Click to Confirm" : "Clear All Data"}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </aside>
+                </aside>
+            )}
 
             {/* Zoom Modal */}
             {

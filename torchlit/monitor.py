@@ -106,6 +106,28 @@ class Monitor(contextlib.ContextDecorator):
                 elif dev_type == "cpu":
                     self.device_type = "cpu"
                     self.device_name = "CPU"
+
+            # Extract architecture tree
+            def _get_module_tree(module, name="Root"):
+                children = list(module.named_children())
+                node_params = sum(p.numel() for p in module.parameters(recurse=False))
+                total_node_params = sum(p.numel() for p in module.parameters())
+
+                node = {
+                    "name": name,
+                    "class_name": module.__class__.__name__,
+                    "params": node_params,
+                    "total_params": total_node_params,
+                    "children": [],
+                }
+
+                for child_name, child_module in children:
+                    node["children"].append(_get_module_tree(child_module, child_name))
+
+                return node
+
+            self.model_info["architecture"] = _get_module_tree(self.model)
+
         except Exception as e:
             # Silently fail if model is not a standard PyTorch module
             pass
@@ -233,7 +255,7 @@ class Monitor(contextlib.ContextDecorator):
             "step": step,
             "metrics": metrics,
             "sys_stats": self._get_system_stats(),
-            "model_info": self.model_info,
+            "model_info": self.model_info if step == 1 else {},
         }
 
         try:

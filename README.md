@@ -28,7 +28,7 @@ model = torch.nn.Sequential(
 )
 
 # Start logging with a single line
-with torchlit.Monitor(exp_name="MyFirstExperiment", model=model, log_sys_stats=True) as logger:
+with torchlit.Monitor(exp_name="MyFirstExperiment", model=model) as logger:
     
     # Simulate a training loop
     for epoch in range(1, 101):

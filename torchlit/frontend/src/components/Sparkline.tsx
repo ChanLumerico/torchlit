@@ -15,13 +15,13 @@ export const Sparkline: React.FC<SparklineProps> = ({ data, dataKey, color }) =>
     const chartData = data.map((d, i) => ({ index: i, value: d[dataKey as keyof SysStats] || 0 }));
 
     return (
-        <div className="absolute inset-0 opacity-20 pointer-events-none mt-12">
+        <div className="absolute -left-2 -right-2 -bottom-2 top-10 opacity-20 pointer-events-none">
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
+                <AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                     <defs>
                         <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={color} stopOpacity={0.8} />
-                            <stop offset="95%" stopColor={color} stopOpacity={0} />
+                            <stop offset="0%" stopColor={color} stopOpacity={0.8} />
+                            <stop offset="100%" stopColor={color} stopOpacity={0.15} />
                         </linearGradient>
                     </defs>
                     <Area
