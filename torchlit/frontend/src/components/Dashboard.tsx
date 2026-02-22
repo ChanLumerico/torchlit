@@ -560,6 +560,7 @@ export const Dashboard: React.FC = () => {
                                 metricKey={zoomedChart}
                                 smoothing={smoothing}
                                 isZoomed={true}
+                                colorIndex={Math.max(0, metricKeys.indexOf(zoomedChart))}
                             />
                         </div>
                     </div>
