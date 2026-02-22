@@ -89,7 +89,7 @@ const getModuleTheme = (className: string): ThemeConfig => {
 };
 
 // null = use default, true = force expand all, false = force collapse all
-const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: boolean | null }> = ({ node, depth, forceExpand }) => {
+const TreeNode = ({ node, depth, forceExpand }: { node: ArchitectureNode; depth: number; forceExpand: boolean | null }) => {
     const hasChildren = node.children && node.children.length > 0;
     const [isExpanded, setIsExpanded] = useState(depth < 2);
     const theme = getModuleTheme(node.class_name);
@@ -152,8 +152,8 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
                         className={`absolute left-0 top-0 bottom-3 border-l-2 ${theme.borderLeft} opacity-30 group-hover:opacity-60 transition-opacity`}
                     />
 
-                    <div className="pl-4 flex flex-col gap-0.5">
-                        {node.children.map((child, idx) => (
+                    <div className="pl-4 flex flex-col gap-0.5 border-none">
+                        {node.children.map((child: ArchitectureNode, idx: number) => (
                             <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} forceExpand={forceExpand} />
                         ))}
                     </div>
