@@ -1,49 +1,95 @@
 # torchlit 🔥
+
 <p align="center">
   <b>A lightweight, beautiful, and interactive real-time PyTorch training dashboard.</b>
 </p>
 
-`torchlit` is a zero-setup desktop GUI that hooks directly into your PyTorch training loops to monitor metrics, system stats, and model insights. Stop relying on cluttered TQDM progress bars or heavy logging frameworks for local experimentation.
+<p align="center">
+  <img src="assets/dashboard.png" alt="torchlit Dashboard" width="100%" />
+</p>
+
+<p align="center">
+  <img src="assets/model_explorer.png" alt="torchlit Model Explorer" width="100%" />
+</p>
+
+---
+
+`torchlit` is a zero-setup desktop GUI that hooks directly into your PyTorch training loops to monitor metrics, system stats, and model architecture in real time. Stop relying on cluttered TQDM bars or heavy logging frameworks.
 
 ## ✨ Features
-* **Zero Configuration:** Just use `with torchlit.Monitor():` and watch your local server instantly spin up.
-* **Real-Time Streaming:** Built with FastAPI and WebSockets to push metrics to your browser immediately.
-* **Auto-Discovery:** Automatically logs model parameter counts, activation memory sizes, and layer outlines.
-* **Multi-Session Comparison:** Compare different experiments side-by-side with overlaid data lines.
-* **System Resource Sparklines:** Live historical tracking of CPU and VRAM usage.
-* **CSV Export:** Download all aggregated metrics at any time for offline analysis.
-* **Auto-Shutdown:** Cleanly cleans up background uvicorn servers when your python script stops.
+
+- **Zero Configuration** — `with torchlit.Monitor():` and your dashboard spins up instantly
+- **Real-Time Streaming** — FastAPI + WebSockets push metrics to the browser immediately
+- **Model Architecture Explorer** — Interactive, color-coded layer tree with parameter counts
+- **Multi-Session Comparison** — Overlay and compare multiple experiments side-by-side
+- **Rust CLI Progress Display** — Beautiful terminal TUI (powered by `ratatui`) while training runs
+- **System Resource Sparklines** — Live CPU, RAM, and VRAM usage tracking
+- **CSV Export** — Download all aggregated metrics at any time
+- **Auto-Shutdown** — Background server cleans up automatically when the browser is closed
 
 ## 🚀 Quick Start
+
+```bash
+pip install torchlit
+```
+
 ```python
 import torch
 import torchlit
-import time
 
-# Create a mock model
 model = torch.nn.Sequential(
     torch.nn.Linear(10, 50),
     torch.nn.ReLU(),
     torch.nn.Linear(50, 2)
 )
 
-# Start logging with a single line
-with torchlit.Monitor(exp_name="MyFirstExperiment", model=model) as logger:
-    
-    # Simulate a training loop
-    for epoch in range(1, 101):
-        loss = max(0, 1.0 - (epoch * 0.01))
-        
-        # Log your metrics
-        logger.log({
-            "loss": loss,
-            "accuracy": epoch / 100.0,
-            "learning_rate": 0.001
-        }, step=epoch)
-        
-        time.sleep(0.5)
+with torchlit.Monitor(exp_name="my_experiment", model=model, total_steps=100) as logger:
+    for step in range(1, 101):
+        loss = max(0, 1.0 - step * 0.01)
+        logger.log({"loss": loss, "accuracy": step / 100.0}, step=step)
 ```
-*Run your script, and your browser will automatically open to `http://localhost:8000` showing a beautiful React dashboard!*
 
-## 📦 Usage
-Check out the `examples/example.py` for a full CIFAR-10 ResNet-50 mock training loop that demonstrates all of `torchlit`'s capabilities.
+*Your browser opens automatically at `http://localhost:8000`.*  
+*A live Rust-powered TUI also appears directly in your terminal.*
+
+## 📖 Full Example
+
+See [`examples/example.py`](examples/example.py) for a complete CIFAR-10 + ResNet-50 training loop demonstrating all features.
+
+```bash
+python examples/example.py
+```
+
+## ⚙️ Monitor Options
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `exp_name` | `str` | `"default_experiment"` | Name for this training run |
+| `model` | `nn.Module` | `None` | PyTorch model (for architecture extraction) |
+| `total_steps` | `int` | `None` | Total steps (enables ETA in CLI display) |
+| `server_url` | `str` | `http://localhost:8000` | Dashboard server URL |
+| `flush_interval` | `float` | `1.0` | Seconds between network flushes |
+
+## 🏗️ Architecture
+
+```
+torchlit.Monitor  ──►  FastAPI Backend  ──►  React Dashboard (browser)
+      │                                             │
+      └──►  Rust CLI (torchlit-progress)            └──►  WebSocket streaming
+```
+
+## 📦 Platform Support
+
+`pip install torchlit` includes pre-compiled CLI binaries for all major platforms:
+
+| Platform | Binary |
+|---|---|
+| macOS ARM (M1/M2/M3) | ✅ Included |
+| macOS Intel | ✅ Included |
+| Linux x86_64 | ✅ Included |
+| Windows x64 | ✅ Included |
+
+## 🔗 Links
+
+- [GitHub](https://github.com/ChanLumerico/torchlit)
+- [PyPI](https://pypi.org/project/torchlit/)
