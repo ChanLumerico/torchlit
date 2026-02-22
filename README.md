@@ -1,6 +1,20 @@
 # torchlit 🔥
 
 <p align="center">
+  <a href="https://pypi.org/project/torchlit/">
+    <img src="https://img.shields.io/pypi/v/torchlit.svg" alt="PyPI version" />
+  </a>
+  <img src="https://img.shields.io/pypi/pyversions/torchlit.svg" alt="Python versions" />
+  <img src="https://img.shields.io/github/license/ChanLumerico/torchlit.svg" alt="License" />
+  <a href="https://github.com/ChanLumerico/torchlit/stargazers">
+    <img src="https://img.shields.io/github/stars/ChanLumerico/torchlit.svg?style=social" alt="GitHub stars" />
+  </a>
+  <a href="https://github.com/ChanLumerico/torchlit/network/members">
+    <img src="https://img.shields.io/github/forks/ChanLumerico/torchlit.svg?style=social" alt="GitHub forks" />
+  </a>
+</p>
+
+<p align="center">
   <b>A lightweight, beautiful, and interactive real-time PyTorch training dashboard.</b>
 </p>
 
