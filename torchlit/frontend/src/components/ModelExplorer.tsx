@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, ChevronDown, ChevronRight, Hash, Box, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+import { Layers, ChevronDown, ChevronRight, Hash, Box, ChevronsDownUp, ChevronsUpDown, Grid, ArrowRight, Activity, Filter, CircleDot, Database } from 'lucide-react';
 import type { ModelInfo, ArchitectureNode } from '../types';
 
 interface ModelExplorerProps {
@@ -13,24 +13,87 @@ const formatNumber = (num: number) => {
     return num.toString();
 };
 
-const getModuleColor = (className: string) => {
+interface ThemeConfig {
+    badge: string;
+    icon: React.ElementType;
+    iconColor: string;
+    rowHover: string;
+    borderLeft: string;
+}
+
+const getModuleTheme = (className: string): ThemeConfig => {
     const name = className.toLowerCase();
-    if (name.includes('conv')) return 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20';
-    if (name.includes('linear')) return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
-    if (['sequential', 'modulelist', 'moduledict'].some(c => name.includes(c)))
-        return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
-    if (['relu', 'sigmoid', 'tanh', 'gelu', 'softmax'].some(c => name.includes(c)))
-        return 'text-rose-400 bg-rose-400/10 border-rose-400/20';
-    if (name.includes('norm')) return 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20';
-    if (name.includes('pool')) return 'text-violet-400 bg-violet-400/10 border-violet-400/20';
-    return 'text-brand/80 bg-brand/10 border-brand/20';
+
+    // Convolutional Layers (Grid pattern)
+    if (name.includes('conv')) return {
+        badge: 'text-indigo-300 bg-indigo-500/10 border-indigo-500/20',
+        icon: Grid,
+        iconColor: 'text-indigo-400',
+        rowHover: 'hover:bg-indigo-500/5',
+        borderLeft: 'border-l-indigo-500/30'
+    };
+
+    // Linear / Fully Connected (Data flow arrow)
+    if (name.includes('linear')) return {
+        badge: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20',
+        icon: ArrowRight,
+        iconColor: 'text-emerald-400',
+        rowHover: 'hover:bg-emerald-500/5',
+        borderLeft: 'border-l-emerald-500/30'
+    };
+
+    // Containers / Blocks (Layers/Boxes)
+    if (['sequential', 'modulelist', 'moduledict', 'block', 'layer'].some(c => name.includes(c))) return {
+        badge: 'text-amber-300 bg-amber-500/10 border-amber-500/20',
+        icon: Layers,
+        iconColor: 'text-amber-400',
+        rowHover: 'hover:bg-amber-500/5',
+        borderLeft: 'border-l-amber-500/30'
+    };
+
+    // Activations (Non-linear activity)
+    if (['relu', 'sigmoid', 'tanh', 'gelu', 'swish', 'silu', 'softmax'].some(c => name.includes(c))) return {
+        badge: 'text-rose-300 bg-rose-500/10 border-rose-500/20',
+        icon: Activity,
+        iconColor: 'text-rose-400',
+        rowHover: 'hover:bg-rose-500/5',
+        borderLeft: 'border-l-rose-500/30'
+    };
+
+    // Normalization (Balancing/Data)
+    if (name.includes('norm')) return {
+        badge: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20',
+        icon: Database,
+        iconColor: 'text-cyan-400',
+        rowHover: 'hover:bg-cyan-500/5',
+        borderLeft: 'border-l-cyan-500/30'
+    };
+
+    // Pooling (Filtering down)
+    if (name.includes('pool')) return {
+        badge: 'text-violet-300 bg-violet-500/10 border-violet-500/20',
+        icon: Filter,
+        iconColor: 'text-violet-400',
+        rowHover: 'hover:bg-violet-500/5',
+        borderLeft: 'border-l-violet-500/30'
+    };
+
+    // Custom / Default (Generic dot)
+    return {
+        badge: 'text-brand/80 bg-brand/10 border-brand/20',
+        icon: CircleDot,
+        iconColor: 'text-slate-500',
+        rowHover: 'hover:bg-slate-800/60',
+        borderLeft: 'border-l-slate-700/50'
+    };
 };
 
 // null = use default, true = force expand all, false = force collapse all
 const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: boolean | null }> = ({ node, depth, forceExpand }) => {
     const hasChildren = node.children && node.children.length > 0;
     const [isExpanded, setIsExpanded] = useState(depth < 2);
-    const colorClass = getModuleColor(node.class_name);
+    const theme = getModuleTheme(node.class_name);
+    const IconComponent = theme.icon;
 
     // Sync with global expand/collapse signal
     useEffect(() => {
@@ -40,23 +103,39 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
     }, [forceExpand, hasChildren]);
 
     return (
-        <div className="flex flex-col">
+        <div className="flex flex-col relative">
+            {/* Visual hierarchy connector line for children depth */}
+            {depth > 0 && (
+                <div
+                    className="absolute top-0 bottom-0 border-l border-slate-800/60 pointer-events-none"
+                    style={{ left: `${(depth - 1) * 1.5 + 1.25}rem` }}
+                />
+            )}
+
             <div
-                className={`flex items-center gap-2 py-2 px-3 hover:bg-slate-800/50 rounded-lg group transition-colors ${hasChildren ? 'cursor-pointer' : ''}`}
+                className={`flex items-center gap-2 py-2 px-3 rounded-lg group transition-all duration-200 border-l-2 border-transparent ${theme.rowHover} ${hasChildren ? 'cursor-pointer' : ''}`}
                 style={{ paddingLeft: `${depth * 1.5 + 0.75}rem` }}
                 onClick={() => hasChildren && setIsExpanded(!isExpanded)}
             >
-                <div className="w-4 h-4 text-slate-500 shrink-0 flex items-center justify-center">
+                {/* Expander Arrow */}
+                <div className="w-5 h-5 text-slate-500 shrink-0 flex items-center justify-center mr-1">
                     {hasChildren ? (
-                        isExpanded ? <ChevronDown className="w-4 h-4 hover:text-white" /> : <ChevronRight className="w-4 h-4 hover:text-white" />
+                        <div className="p-0.5 rounded-md hover:bg-slate-700/50 transition-colors">
+                            {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-white" /> : <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-white" />}
+                        </div>
                     ) : (
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-700/50" />
                     )}
                 </div>
 
-                <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
-                    <span className="text-slate-300 font-mono text-sm truncate">{node.name}</span>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-md border shrink-0 transition-colors ${colorClass}`}>
+                {/* Module Specific Icon */}
+                <div className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md bg-slate-800/40 border border-slate-700/30">
+                    <IconComponent className={`w-3.5 h-3.5 ${theme.iconColor}`} />
+                </div>
+
+                <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 ml-1">
+                    <span className="text-slate-200 font-mono text-sm shadow-sm font-medium tracking-tight truncate">{node.name}</span>
+                    <span className={`text-[11px] font-bold tracking-wide px-2 py-0.5 rounded-md border shrink-0 transition-colors shadow-sm ${theme.badge}`}>
                         {node.class_name}
                     </span>
                 </div>
@@ -77,7 +156,7 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
             </div>
 
             {hasChildren && isExpanded && (
-                <div className="flex flex-col border-l border-slate-800/60 ml-3">
+                <div className={`flex flex-col ml-3 mt-1 relative border-l-2 ${theme.borderLeft} rounded-bl-xl pl-1 bg-gradient-to-br from-black/20 to-transparent`}>
                     {node.children.map((child, idx) => (
                         <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} forceExpand={forceExpand} />
                     ))}
