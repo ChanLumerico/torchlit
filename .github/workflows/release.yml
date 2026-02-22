@@ -20,18 +20,22 @@ jobs:
             target: aarch64-apple-darwin
             suffix: darwin-arm64
             binary: torchlit-progress
+            out_suffix: ""
           - os: macos-13              # macOS Intel
             target: x86_64-apple-darwin
             suffix: darwin-x86_64
             binary: torchlit-progress
+            out_suffix: ""
           - os: ubuntu-latest         # Linux x86_64
             target: x86_64-unknown-linux-gnu
             suffix: linux-x86_64
             binary: torchlit-progress
+            out_suffix: ""
           - os: windows-latest        # Windows x64
             target: x86_64-pc-windows-msvc
             suffix: windows-x86_64
             binary: torchlit-progress.exe
+            out_suffix: ".exe"
 
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +55,7 @@ jobs:
         run: |
           mkdir -p torchlit/bin
           cp torchlit/cli/target/${{ matrix.target }}/release/${{ matrix.binary }} \
-             torchlit/bin/torchlit-progress-${{ matrix.suffix }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+             torchlit/bin/torchlit-progress-${{ matrix.suffix }}${{ matrix.out_suffix }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4

@@ -421,8 +421,9 @@ fn main() -> io::Result<()> {
             terminal.draw(|f| draw(f, &s))?;
         }
 
-        if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
+        // Poll for keypresses — ignore errors (e.g. when running as subprocess)
+        if let Ok(true) = event::poll(Duration::from_millis(100)) {
+            if let Ok(Event::Key(key)) = event::read() {
                 if matches!(key.code, KeyCode::Char('q') | KeyCode::Esc) {
                     break;
                 }
@@ -432,6 +433,9 @@ fn main() -> io::Result<()> {
         {
             let s = state.lock().unwrap();
             if s.is_done {
+                // Draw the final state one more time then hold for 2s
+                drop(s);
+                let s = state.lock().unwrap();
                 terminal.draw(|f| draw(f, &s))?;
                 thread::sleep(Duration::from_secs(2));
                 break;
