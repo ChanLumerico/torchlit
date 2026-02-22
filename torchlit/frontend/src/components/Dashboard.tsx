@@ -257,8 +257,8 @@ export const Dashboard: React.FC = () => {
             {/* Main Layout Area */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
                 {/* Top Navbar */}
-                <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#0b0f19]/80 border-b border-slate-800/80 px-8 h-16 shrink-0 flex items-center justify-between">
-                    <div className="flex items-center gap-12 flex-1">
+                <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#0b0f19]/80 border-b border-slate-800/80 px-8 h-16 shrink-0 flex items-center justify-between gap-8">
+                    <div className="flex items-center gap-12 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="bg-brand/20 p-2 rounded-xl">
                                 <Zap className="text-brand w-6 h-6" />
@@ -285,7 +285,11 @@ export const Dashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex-1 max-w-xl w-full flex items-center justify-center">
+                        <GlobalProgressBar selectedExps={selectedExps} allMetrics={allMetrics} modelInfos={modelInfos} />
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0">
                         <button
                             onClick={() => setIsPanelOpen(!isPanelOpen)}
                             className={`p-2 rounded-xl transition-colors border ${isPanelOpen ? 'bg-brand/10 text-brand border-brand/20' : 'bg-slate-800/50 text-slate-400 border-slate-700/50 hover:text-brand hover:border-brand/30'}`}
@@ -295,8 +299,6 @@ export const Dashboard: React.FC = () => {
                         </button>
                     </div>
                 </nav>
-
-                <GlobalProgressBar selectedExps={selectedExps} allMetrics={allMetrics} modelInfos={modelInfos} />
 
                 {/* Main Content Area */}
                 <main className="w-full max-w-7xl mx-auto px-8 py-8 space-y-8 pb-20">
