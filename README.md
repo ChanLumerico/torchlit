@@ -1,10 +1,10 @@
 # torchlit 🔥
 
 <p align="center">
-  <a href="https://pypi.org/project/torchlit/">
-    <img src="https://img.shields.io/pypi/v/torchlit.svg" alt="PyPI version" />
+  <a href="https://pypi.org/project/torchlit-lib/">
+    <img src="https://img.shields.io/pypi/v/torchlit-lib.svg" alt="PyPI version" />
   </a>
-  <img src="https://img.shields.io/pypi/pyversions/torchlit.svg" alt="Python versions" />
+  <img src="https://img.shields.io/pypi/pyversions/torchlit-lib.svg" alt="Python versions" />
   <img src="https://img.shields.io/github/license/ChanLumerico/torchlit.svg" alt="License" />
   <a href="https://github.com/ChanLumerico/torchlit/stargazers">
     <img src="https://img.shields.io/github/stars/ChanLumerico/torchlit.svg?style=social" alt="GitHub stars" />
