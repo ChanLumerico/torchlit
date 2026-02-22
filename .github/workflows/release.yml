@@ -16,14 +16,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest          # macOS ARM (M-series)
+          - os: macos-latest          # macOS ARM (M-series) — also cross-compiles Intel
             target: aarch64-apple-darwin
             suffix: darwin-arm64
-            binary: torchlit-progress
-            out_suffix: ""
-          - os: macos-13              # macOS Intel
-            target: x86_64-apple-darwin
-            suffix: darwin-x86_64
             binary: torchlit-progress
             out_suffix: ""
           - os: ubuntu-latest         # Linux x86_64
@@ -45,10 +40,20 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Build binary
+      - name: Add macOS Intel cross-compile target (ARM runner only)
+        if: matrix.os == 'macos-latest'
+        run: rustup target add x86_64-apple-darwin
+
+      - name: Build binary (native)
         run: |
           cd torchlit/cli
           cargo build --release --target ${{ matrix.target }}
+
+      - name: Cross-compile macOS Intel binary (ARM runner only)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd torchlit/cli
+          cargo build --release --target x86_64-apple-darwin
 
       - name: Copy binary with platform suffix
         shell: bash
@@ -56,6 +61,13 @@ jobs:
           mkdir -p torchlit/bin
           cp torchlit/cli/target/${{ matrix.target }}/release/${{ matrix.binary }} \
              torchlit/bin/torchlit-progress-${{ matrix.suffix }}${{ matrix.out_suffix }}
+
+      - name: Copy macOS Intel binary (ARM runner only)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          cp torchlit/cli/target/x86_64-apple-darwin/release/torchlit-progress \
+             torchlit/bin/torchlit-progress-darwin-x86_64
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
