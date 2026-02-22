@@ -95,7 +95,6 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
     const theme = getModuleTheme(node.class_name);
     const IconComponent = theme.icon;
 
-    // Sync with global expand/collapse signal
     useEffect(() => {
         if (forceExpand !== null && hasChildren) {
             setIsExpanded(forceExpand);
@@ -103,18 +102,9 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
     }, [forceExpand, hasChildren]);
 
     return (
-        <div className="flex flex-col relative">
-            {/* Visual hierarchy connector line for children depth */}
-            {depth > 0 && (
-                <div
-                    className="absolute top-0 bottom-0 border-l border-slate-800/60 pointer-events-none"
-                    style={{ left: `${(depth - 1) * 1.5 + 1.25}rem` }}
-                />
-            )}
-
+        <div className="flex flex-col">
             <div
-                className={`flex items-center gap-2 py-2 px-3 rounded-lg group transition-all duration-200 border-l-2 border-transparent ${theme.rowHover} ${hasChildren ? 'cursor-pointer' : ''}`}
-                style={{ paddingLeft: `${depth * 1.5 + 0.75}rem` }}
+                className={`flex items-center gap-2 py-2 px-3 rounded-xl group transition-all duration-200 border border-transparent ${theme.rowHover} ${hasChildren ? 'cursor-pointer' : ''}`}
                 onClick={() => hasChildren && setIsExpanded(!isExpanded)}
             >
                 {/* Expander Arrow */}
@@ -124,31 +114,31 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
                             {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-white" /> : <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-white" />}
                         </div>
                     ) : (
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-700/50" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-800" />
                     )}
                 </div>
 
                 {/* Module Specific Icon */}
-                <div className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md bg-slate-800/40 border border-slate-700/30">
+                <div className="shrink-0 flex items-center justify-center w-6 h-6 rounded-lg bg-slate-900/40 border border-slate-800/50 shadow-sm transition-transform group-hover:scale-110">
                     <IconComponent className={`w-3.5 h-3.5 ${theme.iconColor}`} />
                 </div>
 
                 <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 ml-1">
-                    <span className="text-slate-200 font-mono text-sm shadow-sm font-medium tracking-tight truncate">{node.name}</span>
-                    <span className={`text-[11px] font-bold tracking-wide px-2 py-0.5 rounded-md border shrink-0 transition-colors shadow-sm ${theme.badge}`}>
+                    <span className="text-slate-200 font-mono text-sm shadow-sm font-semibold tracking-tight truncate">{node.name}</span>
+                    <span className={`text-[10px] font-bold tracking-tight px-2 py-0.5 rounded-md border shrink-0 transition-colors shadow-sm ${theme.badge}`}>
                         {node.class_name}
                     </span>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0 ml-4">
+                <div className="flex items-center gap-4 shrink-0 ml-4">
                     {node.params > 0 && (
-                        <span className="text-emerald-400 text-xs font-mono tabular-nums flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity" title="Direct Layer Parameters">
+                        <span className="text-emerald-400/60 text-xs font-mono tabular-nums flex items-center gap-1 group-hover:text-emerald-400 transition-colors" title="Direct Layer Parameters">
                             <Hash className="w-3 h-3" />
                             {formatNumber(node.params)}
                         </span>
                     )}
                     {node.total_params > 0 && node.total_params !== node.params && (
-                        <span className="text-slate-400 text-xs font-mono tabular-nums bg-slate-800 px-2 py-1 rounded-md min-w-[4rem] text-right" title="Total Nested Parameters">
+                        <span className="text-slate-500 text-xs font-mono tabular-nums bg-slate-900/60 border border-slate-800/40 px-2 py-1 rounded-lg min-w-[4rem] text-right" title="Total Nested Parameters">
                             {formatNumber(node.total_params)}
                         </span>
                     )}
@@ -156,10 +146,17 @@ const TreeNode: React.FC<{ node: ArchitectureNode; depth: number; forceExpand: b
             </div>
 
             {hasChildren && isExpanded && (
-                <div className={`flex flex-col ml-3 mt-1 relative border-l-2 ${theme.borderLeft} rounded-bl-xl pl-1 bg-gradient-to-br from-black/20 to-transparent`}>
-                    {node.children.map((child, idx) => (
-                        <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} forceExpand={forceExpand} />
-                    ))}
+                <div className="ml-[1.125rem] mt-0.5 pb-1 relative">
+                    {/* Visual Connector Line */}
+                    <div
+                        className={`absolute left-0 top-0 bottom-3 border-l-2 ${theme.borderLeft} opacity-30 group-hover:opacity-60 transition-opacity`}
+                    />
+
+                    <div className="pl-4 flex flex-col gap-0.5">
+                        {node.children.map((child, idx) => (
+                            <TreeNode key={`${child.name}-${idx}`} node={child} depth={depth + 1} forceExpand={forceExpand} />
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
