@@ -5,6 +5,7 @@ import { MetricChart } from './MetricChart';
 import { Sparkline } from './Sparkline';
 import { ModelExplorer } from './ModelExplorer';
 import { ComparisonTable } from './ComparisonTable';
+import { GlobalProgressBar } from './GlobalProgressBar';
 import type { MetricLog, SysStats, ModelInfo } from '../types';
 
 export const Dashboard: React.FC = () => {
@@ -294,6 +295,8 @@ export const Dashboard: React.FC = () => {
                         </button>
                     </div>
                 </nav>
+
+                <GlobalProgressBar selectedExps={selectedExps} allMetrics={allMetrics} modelInfos={modelInfos} />
 
                 {/* Main Content Area */}
                 <main className="w-full max-w-7xl mx-auto px-8 py-8 space-y-8 pb-20">

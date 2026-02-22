@@ -16,6 +16,7 @@ export interface ArchitectureNode {
 
 export interface ModelInfo {
     name?: string;
+    total_steps?: number;
     total_params?: string | number;
     trainable_params?: string | number;
     activation_size?: string;

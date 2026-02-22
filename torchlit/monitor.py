@@ -67,6 +67,9 @@ class Monitor(contextlib.ContextDecorator):
         self.start_server = start_server
         self.total_steps = total_steps
 
+        if self.total_steps is not None:
+            self.model_info["total_steps"] = self.total_steps
+
         self.queue = queue.Queue()
         self.is_running = False
         self.worker_thread: Optional[threading.Thread] = None

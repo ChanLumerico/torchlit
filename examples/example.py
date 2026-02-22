@@ -44,7 +44,9 @@ def run_real_test():
     print(f"Starting real training loop on {device}...")
 
     # Use torchlit to monitor the real model
-    with torchlit.Monitor(exp_name="cifar10_resnet50", model=model) as logger:
+    with torchlit.Monitor(
+        exp_name="cifar10_resnet50", model=model, total_steps=len(dataloader) * 9
+    ) as logger:
 
         model.train()
         global_step = 0
