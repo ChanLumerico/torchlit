@@ -5,11 +5,9 @@
 </p>
 
 <p align="center">
-  <img src="assets/dashboard.png" alt="torchlit Dashboard" width="100%" />
-</p>
-
-<p align="center">
-  <img src="assets/model_explorer.png" alt="torchlit Model Explorer" width="100%" />
+  <img src="assets/dashboard.png" alt="torchlit Dashboard" width="49%" />
+  &nbsp;&nbsp;
+  <img src="assets/model_explorer.png" alt="torchlit Model Explorer" width="49%" />
 </p>
 
 ---
