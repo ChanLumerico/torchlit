@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - .:/app
+      - /app/torchlit/frontend/node_modules
+      - /app/torchlit/frontend/dist
     ports:
       - "8000:8000"
     tty: true # Required for Rust TUI to render
