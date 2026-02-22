@@ -97,6 +97,17 @@ jobs:
           path: collected-bins
           merge-multiple: true
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build React frontend
+        run: |
+          cd torchlit/frontend
+          npm ci
+          npm run build
+
       - name: Copy binaries into package
         run: |
           mkdir -p torchlit/bin
