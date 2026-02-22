@@ -32,7 +32,16 @@ export const MetricChart: React.FC<MetricChartProps> = ({
     isZoomed = false,
     colorIndex = 0
 }) => {
-    const colors = ["#EE4C2C", "#facc15", "#fb923c", "#f43f5e", "#c2410c", "#fde047", "#9f1239"];
+    // Modern, soft warm palette starting from orange
+    const colors = [
+        "#f97316", // Tailwind orange-500
+        "#f7b267", // Soft amber/muted gold
+        "#f4845f", // Soft coral
+        "#f27059", // Terracotta
+        "#f6bd60", // Muted sand/yellow
+        "#f28482", // Soft pinkish red
+        "#f79d65"  // Peach orange
+    ];
 
     // Compute EMA for each selected experiment
     const processedData = React.useMemo(() => {
