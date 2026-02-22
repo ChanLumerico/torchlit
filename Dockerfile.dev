@@ -1,0 +1,30 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js (for React frontend)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
+# Install Rust (for CLI TUI)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /app
+
+# We don't COPY here if we are mounting via docker-compose, 
+# but it's good practice to provide the skeleton.
+COPY . .
+
+# Build the frontend and install the package
+RUN cd torchlit/frontend && npm install && npm run build
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+RUN pip install transformers datasets evaluate accelerate safetensors
+RUN pip install -e .
+
+# Keep the container running or run a specific example
+CMD ["python", "examples/example.py"]

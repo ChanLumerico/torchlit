@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  torchlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    tty: true # Required for Rust TUI to render
+    stdin_open: true # Required for interactive terminal output
