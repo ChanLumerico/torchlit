@@ -363,7 +363,7 @@ export const Dashboard: React.FC = () => {
                                                     {primaryStats.cpu_percent.toFixed(1)}%
                                                 </h2>
                                                 <p className="text-slate-500 text-xs mt-2 uppercase flex items-center gap-1">
-                                                    Primary: <span className="text-brand font-semibold">{selectedExps[0]}</span>
+                                                    Primary: <span className="text-blue-400 font-semibold">{selectedExps[0]}</span>
                                                 </p>
                                             </div>
                                             <div className="bg-blue-500/20 p-4 rounded-2xl relative z-10">
