@@ -9,55 +9,75 @@ import {
     ResponsiveContainer,
     Legend
 } from 'recharts';
+import { Maximize2, Activity } from 'lucide-react';
 
 interface MetricChartProps {
     title: string;
     data: any[];
-    dataKey: string;
-    color: string;
+    selectedExps: string[];
+    metricKey: string;
     smoothing: number;
+    onZoom?: () => void;
+    isZoomed?: boolean;
 }
 
-export const MetricChart: React.FC<MetricChartProps> = ({ title, data, dataKey, color, smoothing }) => {
-    // Compute EMA for the data
-    const smoothedData = React.useMemo(() => {
+export const MetricChart: React.FC<MetricChartProps> = ({
+    title,
+    data,
+    selectedExps,
+    metricKey,
+    smoothing,
+    onZoom,
+    isZoomed = false
+}) => {
+    const colors = ["#EE4C2C", "#fb923c", "#fca5a5", "#fcd34d", "#f87171", "#6366f1", "#10b981"];
+
+    // Compute EMA for each selected experiment
+    const processedData = React.useMemo(() => {
         if (smoothing === 0) return data;
 
-        const result: any[] = [];
-        let prevSmoothed: number | null = null;
+        const smoothedData = data.map(d => ({ ...d }));
 
-        for (const item of data) {
-            const val = item[dataKey];
-            if (val === undefined || val === null) {
-                result.push({ ...item });
-                continue;
+        selectedExps.forEach(exp => {
+            const key = `${metricKey}::${exp}`;
+            let prevSmoothed: number | null = null;
+
+            for (let i = 0; i < smoothedData.length; i++) {
+                const val = smoothedData[i][key];
+                if (val === undefined || val === null) continue;
+
+                if (prevSmoothed === null) {
+                    prevSmoothed = val;
+                } else {
+                    prevSmoothed = prevSmoothed * smoothing + val * (1 - smoothing);
+                }
+                smoothedData[i][`${key}_smoothed`] = prevSmoothed;
             }
+        });
 
-            if (prevSmoothed === null) {
-                prevSmoothed = val;
-            } else {
-                prevSmoothed = prevSmoothed * smoothing + val * (1 - smoothing);
-            }
-
-            result.push({
-                ...item,
-                [`${dataKey}_smoothed`]: prevSmoothed
-            });
-        }
-        return result;
-    }, [data, dataKey, smoothing]);
+        return smoothedData;
+    }, [data, metricKey, selectedExps, smoothing]);
 
     return (
-        <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300">
+        <div className={`bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl shadow-xl transition-all duration-300 ${isZoomed ? 'p-8 h-full flex flex-col' : 'p-5 hover:shadow-2xl'}`}>
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                <h3 className={`${isZoomed ? 'text-lg' : 'text-sm'} font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2`}>
+                    <Activity size={isZoomed ? 20 : 16} className="text-brand" />
                     {title}
                 </h3>
+                {!isZoomed && onZoom && (
+                    <button
+                        onClick={onZoom}
+                        className="p-2 hover:bg-slate-700/50 rounded-lg text-slate-400 hover:text-brand transition-colors"
+                        title="Zoom Chart"
+                    >
+                        <Maximize2 size={16} />
+                    </button>
+                )}
             </div>
-            <div className="h-64 w-full">
+            <div className={`${isZoomed ? 'flex-1 min-h-0' : 'h-64'} w-full`}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={smoothedData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                    <LineChart data={processedData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                         <XAxis
                             dataKey="step"
@@ -85,32 +105,41 @@ export const MetricChart: React.FC<MetricChartProps> = ({ title, data, dataKey, 
                         />
                         <Legend verticalAlign="top" height={36} iconType="circle" />
 
-                        {/* Faint Raw Line */}
-                        {smoothing > 0 && (
-                            <Line
-                                name={`${title} (raw)`}
-                                type="monotone"
-                                dataKey={dataKey}
-                                stroke={color}
-                                strokeWidth={1}
-                                strokeOpacity={0.3}
-                                dot={false}
-                                activeDot={false}
-                                isAnimationActive={false}
-                            />
-                        )}
+                        {selectedExps.map((exp, idx) => {
+                            const key = `${metricKey}::${exp}`;
+                            const color = colors[idx % colors.length];
+                            const dataKey = smoothing > 0 ? `${key}_smoothed` : key;
 
-                        {/* Bold Smoothed Line */}
-                        <Line
-                            name={smoothing > 0 ? `${title} (smooth)` : title}
-                            type="monotone"
-                            dataKey={smoothing > 0 ? `${dataKey}_smoothed` : dataKey}
-                            stroke={color}
-                            strokeWidth={3}
-                            dot={false}
-                            activeDot={{ r: 6, strokeWidth: 0, fill: color }}
-                            animationDuration={300}
-                        />
+                            return (
+                                <React.Fragment key={exp}>
+                                    {/* Faint Raw Line */}
+                                    {smoothing > 0 && (
+                                        <Line
+                                            name={`${exp} (raw)`}
+                                            type="monotone"
+                                            dataKey={key}
+                                            stroke={color}
+                                            strokeWidth={1}
+                                            strokeOpacity={0.2}
+                                            dot={false}
+                                            activeDot={false}
+                                            isAnimationActive={false}
+                                        />
+                                    )}
+                                    {/* Bold Main Line */}
+                                    <Line
+                                        name={exp}
+                                        type="monotone"
+                                        dataKey={dataKey}
+                                        stroke={color}
+                                        strokeWidth={isZoomed ? 4 : 2}
+                                        dot={false}
+                                        activeDot={{ r: 6, strokeWidth: 0, fill: color }}
+                                        animationDuration={300}
+                                    />
+                                </React.Fragment>
+                            );
+                        })}
                     </LineChart>
                 </ResponsiveContainer>
             </div>
