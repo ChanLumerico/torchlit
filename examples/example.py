@@ -22,12 +22,8 @@ def run_real_test():
         model_name, num_labels=10, ignore_mismatched_sizes=True
     )
 
-    # Setup Device
-    device = torch.device(
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps" if torch.backends.mps.is_available() else "cpu"
-    )
+    # Setup Device - explicitly use CPU for testing as requested
+    device = torch.device("cpu")
     model.to(device)
 
     # Preprocess

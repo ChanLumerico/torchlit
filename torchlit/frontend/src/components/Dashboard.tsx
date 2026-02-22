@@ -285,7 +285,6 @@ export const Dashboard: React.FC = () => {
                     </div>
 
                     <div className="flex-1 max-w-xl w-full flex items-center justify-center">
-                        <GlobalProgressBar selectedExps={selectedExps} allMetrics={allMetrics} modelInfos={modelInfos} />
                     </div>
 
                     <div className="flex items-center gap-4 shrink-0">
@@ -566,6 +565,9 @@ export const Dashboard: React.FC = () => {
                     </div>
                 )
             }
+
+            {/* Dynamic Island Global Progress Bar */}
+            <GlobalProgressBar selectedExps={selectedExps} allMetrics={allMetrics} modelInfos={modelInfos} />
         </div >
     );
 };

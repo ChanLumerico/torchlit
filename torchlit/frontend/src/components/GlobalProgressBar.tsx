@@ -17,7 +17,7 @@ export const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({ selectedEx
     if (expsWithProgress.length === 0) return null;
 
     return (
-        <div className="w-full flex flex-col gap-2">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 pointer-events-none">
             {expsWithProgress.map(exp => {
                 const totalSteps = modelInfos[exp].total_steps!;
                 const metrics = allMetrics[exp] || [];
@@ -25,18 +25,30 @@ export const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({ selectedEx
                 const progress = Math.min((currentStep / totalSteps) * 100, 100);
 
                 return (
-                    <div key={exp} className="w-full flex flex-col">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5 font-medium tracking-wide">
-                            <span className="uppercase text-slate-300 truncate mr-2" title={exp}>{exp} <span className="text-slate-500">Progress</span></span>
-                            <span className="shrink-0">{currentStep.toLocaleString()} / {totalSteps.toLocaleString()} <span className="text-brand ml-1">({progress.toFixed(1)}%)</span></span>
+                    <div
+                        key={exp}
+                        className="pointer-events-auto flex items-center gap-4 bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-full px-5 py-2.5 shadow-2xl shadow-brand/10 hover:scale-[1.02] hover:shadow-brand/20 transition-all duration-300 pointer-events-auto group"
+                    >
+                        {/* Glow indicator & Exp Name */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <span className="w-2 h-2 rounded-full bg-brand animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.8)]" />
+                            <span className="text-sm font-semibold text-slate-200 truncate max-w-[120px]" title={exp}>{exp}</span>
                         </div>
-                        <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden shadow-inner flex shrink-0">
+
+                        {/* Compact Thin Progress Bar */}
+                        <div className="w-48 bg-slate-800 rounded-full h-1.5 overflow-hidden shadow-inner flex shrink-0 group-hover:h-2 transition-all duration-300">
                             <div
-                                className="bg-gradient-to-r from-blue-500 via-indigo-500 to-brand h-full rounded-full transition-all duration-300 ease-out relative"
+                                className="bg-gradient-to-r from-orange-400 via-brand to-rose-500 h-full rounded-full transition-all duration-300 ease-out relative"
                                 style={{ width: `${progress}%` }}
                             >
-                                <div className="absolute top-0 right-0 bottom-0 w-10 bg-gradient-to-l from-white/20 to-transparent blur-[2px]" />
+                                <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white/40 to-transparent blur-[1px]" />
                             </div>
+                        </div>
+
+                        {/* Step counts & Percentage */}
+                        <div className="flex items-center gap-2 shrink-0 text-xs font-medium tracking-wide">
+                            <span className="text-slate-400">{currentStep.toLocaleString()} <span className="text-slate-600">/</span> {totalSteps.toLocaleString()}</span>
+                            <span className="text-brand w-10 text-right">{progress.toFixed(1)}%</span>
                         </div>
                     </div>
                 );
