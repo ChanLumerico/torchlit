@@ -6,11 +6,20 @@ export interface SysStats {
     vram_percent?: number | null;
 }
 
+export interface ArchitectureNode {
+    name: string;
+    class_name: string;
+    params: number;
+    total_params: number;
+    children: ArchitectureNode[];
+}
+
 export interface ModelInfo {
     name?: string;
     total_params?: string | number;
     trainable_params?: string | number;
     activation_size?: string;
+    architecture?: ArchitectureNode;
     [key: string]: any;
 }
 

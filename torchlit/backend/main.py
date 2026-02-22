@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -140,14 +140,25 @@ async def list_experiments():
 
 @app.post("/api/experiments/clear")
 async def clear_all_experiments():
-    """Delete all experiment log files."""
+    """Clear all experiment data and drop connections."""
     try:
-        if os.path.exists(LOG_DIR):
-            for f in os.listdir(LOG_DIR):
-                if f.endswith(".jsonl"):
-                    os.remove(os.path.join(LOG_DIR, f))
+        # Close all websocket connections
+        for exp_name in list(active_connections.keys()):
+            for ws in list(active_connections[exp_name]):
+                try:
+                    await ws.close()
+                except Exception:
+                    pass
+
+        # Clear in-memory datastores
+        experiment_metrics.clear()
+        active_connections.clear()
+
         return {"status": "success"}
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
